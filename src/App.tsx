@@ -1,26 +1,41 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter as Router, useRoutes } from "react-router-dom";
+import { useEffect, useState } from "react";
+import Layout from "./components/layouts/Layout";
+import { appRoutes } from "./routes/routes";
+// import Buildings from "./pages/Buildings";
+// import FloorPlans from "./pages/FloorPlans";
+// import Navigation from "./pages/Navigation";
 
-function App() {
+export default function App() {
+
+  function AppRoutes({ darkMode, toggleDarkMode }: { darkMode: boolean; toggleDarkMode: () => void }) {
+    const routes = useRoutes(appRoutes);
+    return (
+      <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+        {routes}
+      </Layout>
+    );
+  }
+
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
+
+  useEffect(() => {
+    const html = document.documentElement;
+    if (darkMode) {
+      html.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      html.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
+  
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <AppRoutes darkMode={darkMode} toggleDarkMode={() => setDarkMode(!darkMode)} />
+    </Router>
   );
 }
-
-export default App;
