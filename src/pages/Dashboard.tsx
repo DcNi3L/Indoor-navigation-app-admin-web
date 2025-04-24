@@ -1,7 +1,10 @@
+import { useNavigate } from "react-router-dom";
 import StatCard from "../components/ui/StatCard";
 import { FaBuilding, FaMap, FaRoute, FaQrcode, FaUserCog, FaDatabase } from "react-icons/fa";
 
 export default function Dashboard() {
+    const navigate = useNavigate();
+
   return (
     <div className="p-6 space-y-6 mt-10">
       {/* Метрики */}
@@ -29,7 +32,12 @@ export default function Dashboard() {
       <div className="bg-white rounded-xl shadow-md p-6">
         <h3 className="text-xl font-semibold mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <button className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">Add New Building</button>
+          <button
+            onClick={() => navigate("/create-location")}
+            className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
+          >
+            Add New Location
+          </button>
           <button className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition">Upload Floor Plan</button>
           <button className="bg-yellow-600 text-white py-2 px-4 rounded hover:bg-yellow-700 transition">Create New Route</button>
           <button className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition">Scan QR Code</button>

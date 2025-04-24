@@ -1,25 +1,44 @@
-// src/routes/routes.tsx
-import { RouteObject } from "react-router-dom";
+import { Outlet, RouteObject } from "react-router-dom";
 import Dashboard from "../pages/Dashboard";
-// import Buildings from "../pages/Buildings";
-// import FloorPlans from "../pages/FloorPlans";
-// import Navigation from "../pages/Navigation";
+import CreateLocation from "../pages/CreateLocation";
+import Layout from "../components/layouts/Layout";
+import { useEffect, useState } from "react";
 
 export const appRoutes: RouteObject[] = [
   {
-    path: "/",
-    element: <Dashboard />,
+    element: <LayoutWrapper />, // все страницы с layout
+    children: [
+      {
+        path: "/",
+        element: <Dashboard />,
+      },
+      // другие страницы
+    ],
   },
-//   {
-//     path: "/buildings",
-//     element: <Buildings />,
-//   },
-//   {
-//     path: "/floor-plans",
-//     element: <FloorPlans />,
-//   },
-//   {
-//     path: "/navigation",
-//     element: <Navigation />,
-//   },
+  {
+    path: "/create-location",
+    element: <CreateLocation />, // без layout
+  },
 ];
+
+
+function LayoutWrapper() {
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  useEffect(() => {
+    const html = document.documentElement;
+    if (darkMode) {
+      html.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      html.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
+  return (
+    <Layout darkMode={darkMode} toggleDarkMode={() => setDarkMode(!darkMode)}>
+      <Outlet />
+    </Layout>
+  );
+}
