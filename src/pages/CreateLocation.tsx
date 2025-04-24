@@ -2,9 +2,10 @@ import { MapContainer, TileLayer, useMap, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet';
 import { useState, useEffect, useMemo } from 'react';
-import { FaArrowLeftLong, FaLocationDot  } from "react-icons/fa6";
 import { renderToStaticMarkup } from 'react-dom/server';
 import { useNavigate } from 'react-router-dom';
+import { FaArrowLeftLong, FaLocationDot  } from "react-icons/fa6";
+import { BiSolidImageAdd } from "react-icons/bi";
 
 interface ModeControlProps {
     setMapType: (type: 'standard' | 'satellite') => void;
@@ -139,6 +140,8 @@ export default function CreateLocation() {
 
     const [mapType, setMapType] = useState('standard');
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // Tile layers for standard and satellite
   const standardLayer = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -160,25 +163,72 @@ export default function CreateLocation() {
 
   const customIcon = useMemo(() => createCustomIcon(), []);
 
+  // Handle file upload
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      setErrorMessage('Invalid file type. Please upload a JPG, PNG, or SVG file.');
+      setUploadedFile(null);
+      return;
+    }
+
+    // Validate file size (5 MB = 5 * 1024 * 1024 bytes)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setErrorMessage('File size exceeds 5 MB. Please upload a smaller file.');
+      setUploadedFile(null);
+      return;
+    }
+
+    // If validation passes, store the file and clear any error
+    setUploadedFile(file);
+    setErrorMessage(null);
+  };
+
   return (
     <div className="h-screen flex">
       {/* Sidebar */}
       <div className="w-80 bg-white shadow-lg p-6">
         <div className='flex justify-start gap-10 items-center mb-6'>
-            <button onClick={() => navigate('/')} className='text-blue-400'><FaArrowLeftLong size={24} /></button>
+            <button 
+                onClick={() => navigate('/')} 
+                className='text-blue-400 hover:text-blue-600 transition'
+            >
+                <FaArrowLeftLong size={28} />
+            </button>
             <h2 className="text-xl">Create Location</h2>
         </div>
         <p className="text-sm text-gray-500 mb-2">STEP: 1 OF 2</p>
         <p className="text-sm text-gray-700 mb-4">Upload a file with indoor floor plan. This plan will be used as a map during navigation</p>
         
         <div className="border-2 border-dashed border-blue-400 rounded p-6 text-center cursor-pointer hover:border-blue-600 transition">
-          <div className="text-blue-600 text-sm font-semibold">UPLOAD FLOOR PLAN</div>
-          <p className="text-xs text-gray-500 mt-2">Maximum size: 5 MB<br/>JPG, PNG or SVG file</p>
+            <label htmlFor="file-upload" className="cursor-pointer">
+                <p className='flex justify-center'><BiSolidImageAdd size={50} color="#60a5fa" /></p>
+                <div className="text-blue-600 text-sm underline">UPLOAD FLOOR PLAN</div>
+                <p className="text-xs text-gray-500 mt-2">Maximum size: 5 MB<br />JPG, PNG or SVG file</p>
+            </label>
+            <input
+                id="file-upload"
+                type="file"
+                accept="image/jpeg,image/png,image/svg+xml"
+                onChange={handleFileUpload}
+                className="hidden"
+            />
+            {uploadedFile && (
+                <p className="text-xs text-green-600 mt-2">Uploaded: {uploadedFile.name}</p>
+            )}
+            {errorMessage && (
+                <p className="text-xs text-red-600 mt-2">{errorMessage}</p>
+            )}
         </div>
         <div className='w-full flex mt-2'>
             <button 
                 className="mt-6 w-72 py-1.5 px-14 text-sm border-2 outline-none border-blue-400 font-bold 
-                text-blue-600 hover:bg-blue-400 hover:text-white transition duration-200"
+                text-blue-400 hover:border-red-400 hover:text-red-400 transition duration-200"
             >
                 Cancel
             </button>
