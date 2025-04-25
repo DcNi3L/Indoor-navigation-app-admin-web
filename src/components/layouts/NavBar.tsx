@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
-import { FaBell, FaMoon, FaSun, FaUserCircle } from "react-icons/fa";
+import { FaBell, FaMoon, FaSun, FaUserCircle, FaUser } from "react-icons/fa";
+import { IoExit } from "react-icons/io5";
 import { IoIosArrowDown } from "react-icons/io";
 import { translations } from "../../utils/translations";
+import ProfileModal from "../ui/ProfileModal";
 
 interface NavbarProps {
   darkMode: boolean;
@@ -11,8 +14,10 @@ interface NavbarProps {
 
 export default function Navbar({darkMode, toggleDarkMode}: NavbarProps) {
   const [language, setLanguage] = useState<"EN" | "RU">("EN");
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const t = translations[language]; 
   const location = useLocation();
+  const navigate = useNavigate();
 
   const getPageTitle = () => {
     const path = location.pathname;
@@ -76,21 +81,24 @@ export default function Navbar({darkMode, toggleDarkMode}: NavbarProps) {
             aria-labelledby="profile-menu"
           >
             <button
-              className="block w-full text-left px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
+              onClick={() => setShowProfileModal(true)}
+              className="w-full text-left px-4 py-2 text-sm flex gap-2 items-center text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
               role="menuitem"
             >
-              Profile
+              <FaUser /> Profile
             </button>
             <hr className="border-t border-gray-200 dark:border-gray-700" />
             <button
-              className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
+              onClick={() => {navigate('/login')}}
+              className="flex gap-2 items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
               role="menuitem"
             >
-              Logout
+              <IoExit /> Logout
             </button>
           </div>
         </div>
       </div>
+      <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} language={language} />
     </nav>
   );
 }

@@ -82,7 +82,7 @@ export default function Dashboard() {
       {/* Раздел: Быстрые действия */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
         <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Quick Actions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="z-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <button
             onClick={() => navigate("/create-location")}
             className="flex items-center justify-center bg-blue-600 text-white py-3 px-4 rounded-lg shadow hover:bg-blue-700 transition-transform duration-300 ease-in-out transform hover:scale-105"

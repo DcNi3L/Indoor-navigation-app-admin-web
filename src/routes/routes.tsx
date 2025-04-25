@@ -1,8 +1,14 @@
 import { Outlet, RouteObject } from "react-router-dom";
-import Dashboard from "../pages/Dashboard";
-import CreateLocation from "../pages/CreateLocation";
 import Layout from "../components/layouts/Layout";
 import { useEffect, useState } from "react";
+import Dashboard from "../pages/Dashboard";
+import Buildings from "../pages/Buildings";
+import Floors from "../pages/Floors";
+import Routes from "../pages/Routes";
+import QRPoints from "../pages/QRPoints";
+import CreateLocation from "../pages/CreateLocation";
+import Login from "../pages/Login";
+import Register from "../pages/Register";
 
 export const appRoutes: RouteObject[] = [
   {
@@ -12,12 +18,35 @@ export const appRoutes: RouteObject[] = [
         path: "/",
         element: <Dashboard />,
       },
-      // другие страницы
+      {
+        path: "/buildings",
+        element: <Buildings />,
+      },
+      {
+        path: "/floors",
+        element: <Floors />,
+      },
+      {
+        path: "/routes",
+        element: <Routes />,
+      },
+      {
+        path: "/qr",
+        element: <QRPoints />,
+      },
     ],
   },
   {
     path: "/create-location",
     element: <CreateLocation />, // без layout
+  },
+  {
+    path: "/login",
+    element: <Login />,
+  },
+  {
+    path: "/register",
+    element: <Register />,
   },
 ];
 

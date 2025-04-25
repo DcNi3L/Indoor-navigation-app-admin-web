@@ -9,6 +9,13 @@ export const translations = {
       adminPanel: "Admin Panel",
       profile: "Profile",
       logout: "Logout",
+      firstName: "First Name",
+      lastName: "Last Name",
+      edit: "Edit",
+      save: "Save",
+      phone: "Phone Number",
+      birthDate: "Birth Date",
+      role: "Role",
     },
     RU: {
       dashboard: "Панель",
@@ -19,6 +26,13 @@ export const translations = {
       adminPanel: "Админка",
       profile: "Профиль",
       logout: "Выйти",
+      firstName: "Имя",
+      lastName: "Фамилия",
+      edit: "Редактировать",
+      save: "Сохранить",
+      phone: "Номер телефона",
+      birthDate: "Дата рождения",
+      role: "Роль",
     },
   };
   

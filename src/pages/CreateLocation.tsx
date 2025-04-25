@@ -4,7 +4,8 @@ import L from 'leaflet';
 import { useState, useEffect, useMemo } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeftLong, FaLocationDot  } from "react-icons/fa6";
+import { FaArrowLeftLong, FaLocationDot } from "react-icons/fa6";
+import { FaSearch } from "react-icons/fa";
 import { BiSolidImageAdd } from "react-icons/bi";
 import InteractiveImageOverlay from '../components/widgets/InteractiveImageOverlay';
 
@@ -144,6 +145,13 @@ export default function CreateLocation() {
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [step, setStep] = useState<1 | 2>(1);
+    const [overlayCenter, setOverlayCenter] = useState<[number, number] | null>(null);
+    const [opacity, setOpacity] = useState<number>(0.8);
+    const [address, setAddress] = useState('');
+    const [dimensionWidth, setDimensionWidth] = useState<number>(0);
+    const [dimensionHeight, setDimensionHeight] = useState<number>(0);
+    console.log('Image center: ', overlayCenter);
+
 
     // Tile layers for standard and satellite
   const standardLayer = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -186,6 +194,53 @@ export default function CreateLocation() {
     setUploadedFile(file);
     setErrorMessage(null);
   };
+
+  const handleAddressSearch = async () => {
+    if (!address.trim()) return;
+  
+    const tryNominatim = async (): Promise<[number, number] | null> => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+        const results = await response.json();
+  
+        if (results?.length > 0) {
+          const lat = parseFloat(results[0].lat);
+          const lon = parseFloat(results[0].lon);
+          return [lat, lon];
+        }
+      } catch (e) {
+        console.warn('Nominatim failed:', e);
+      }
+      return null;
+    };
+  
+    const tryMapbox = async (): Promise<[number, number] | null> => {
+      try {
+        const token = process.env.MAPBOX_API_TOKEN;
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${token}&limit=1`
+        );
+        const data = await response.json();
+  
+        if (data.features && data.features.length > 0) {
+          const [lon, lat] = data.features[0].center;
+          return [lat, lon];
+        }
+      } catch (e) {
+        console.warn('Mapbox failed:', e);
+      }
+      return null;
+    };
+  
+    const coords = (await tryNominatim()) || (await tryMapbox());
+  
+    if (coords) {
+      setUserLocation(coords);
+      setOverlayCenter(coords);
+    } else {
+      alert('Address not found in any source');
+    }
+  };    
 
   return (
     <div className="h-screen flex">
@@ -234,11 +289,116 @@ export default function CreateLocation() {
             <>
               <p className="text-sm text-gray-500 mb-2">STEP: 2 OF 2</p>
               <p className="text-sm text-gray-700 mb-4">
-                Specify key locations (entrance, elevator, etc.) or draw navigation zones.
+                Move, Scale or Rotate your floor plan to align it with the actual position on the map:
               </p>
-              {/* Здесь можешь добавить форму или инструкции по выбору точек */}
-              <div className="bg-gray-100 border border-dashed border-blue-300 rounded p-4 text-center text-sm text-gray-600">
-                Interactive location tagging interface goes here...
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  defaultValue="House"
+                  className="w-full px-3 py-2 text-sm bg-gray-100 rounded border border-gray-300"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Floor Name</label>
+                <input
+                  type="text"
+                  defaultValue="01"
+                  className="w-full px-3 py-2 text-sm bg-gray-100 rounded border border-gray-300"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  defaultValue="My house"
+                  className="w-full px-3 py-2 text-sm bg-gray-100 rounded border border-gray-300"
+                ></textarea>
+              </div>
+
+              {/* Advanced Settings Toggle */}
+              <div className="border-t pt-4">
+                <details className="text-sm text-gray-600">
+                  <summary className="cursor-pointer select-none mb-2 font-medium">Advanced setting</summary>
+                  <div className="max-h-64 overflow-y-auto overflow-x-hidden pr-1 pb-1">
+                    <div className="mb-4">
+                      <label className="block text-sm mb-1">Address:</label>
+                      <div className="flex">
+                        <input
+                          type="text"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded-l"
+                          placeholder="Search by address..."
+                        />
+                        <button
+                          onClick={handleAddressSearch} 
+                          className="px-3 bg-white border border-gray-300 rounded-r"
+                        >
+                          <FaSearch />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Coordinates */}
+                    <div className="mb-2">
+                      <label className="block text-sm mb-1">Latitude:</label>
+                      <input
+                        type="text"
+                        value={overlayCenter ? overlayCenter[0].toFixed(8) : ''}
+                        className="w-full px-3 py-2 text-sm bg-gray-100 rounded border border-gray-300"
+                      />
+                    </div>
+
+                    <div className="mb-2">
+                      <label className="block text-sm mb-1">Longitude:</label>
+                      <input
+                        type="text"
+                        value={overlayCenter ? overlayCenter[1].toFixed(8) : ''}
+                        className="w-full px-3 py-2 text-sm bg-gray-100 rounded border border-gray-300"
+                      />
+                    </div>
+
+                    {/* Dimensions */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm mb-1">Floor width (m):</label>
+                        <input
+                          type="number"
+                          value={dimensionWidth}
+                          onChange={(e) => setDimensionWidth(Number(e.target.value))}
+                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-1">Floor height (m):</label>
+                        <input
+                          type="number"
+                          value={dimensionHeight}
+                          onChange={(e) => setDimensionHeight(Number(e.target.value))}
+                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mb-2">
+                      <label className="block text-sm mb-1 text-gray-600">
+                        Plan opacity <span className="text-blue-900 font-semibold">{Math.round(opacity * 100)}%</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={opacity}
+                        onChange={(e) => setOpacity(parseFloat(e.target.value))}
+                        className="w-full accent-green-500"
+                      />
+                    </div>
+                  </div>
+                </details>
               </div>
             </>
           )}
@@ -257,7 +417,7 @@ export default function CreateLocation() {
         {step === 2 && (
           <div className='flex justify-between mt-2'>
             <button
-                onClick={() => {setStep(1)}}
+                onClick={() => {setStep(1); setUploadedFile(null);}}
                 className="py-2 px-8 text-sm border-2 outline-none border-blue-400 rounded text-nowrap
                 text-blue-400 hover:border-orange-400 hover:text-orange-400 transition duration-200"
             >
@@ -293,7 +453,16 @@ export default function CreateLocation() {
             }
           />
 
-          <InteractiveImageOverlay uploadedFile={uploadedFile} userLocation={userLocation} />
+          <InteractiveImageOverlay
+            uploadedFile={uploadedFile}
+            userLocation={userLocation}
+            onCenterChange={setOverlayCenter}
+            onDimensionsChange={(w, h) => {
+              setDimensionWidth(w);
+              setDimensionHeight(h);
+            }}
+            opacity={opacity}
+          />
 
           <ZoomControl />
           <CenterControl setUserLocation={setUserLocation} />
