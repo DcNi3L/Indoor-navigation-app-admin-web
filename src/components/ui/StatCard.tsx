@@ -9,7 +9,7 @@ type StatCardProps = {
 
 export default function StatCard({ title, value, icon, color = "bg-blue-100 text-blue-800" }: StatCardProps) {
   return (
-    <div className={`p-4 rounded-xl shadow ${color}`}>
+    <div className={`p-4 rounded-xl shadow ${color} dark:text-white cursor-pointer`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium">{title}</p>

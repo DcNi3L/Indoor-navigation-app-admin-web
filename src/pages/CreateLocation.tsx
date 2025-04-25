@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeftLong, FaLocationDot  } from "react-icons/fa6";
 import { BiSolidImageAdd } from "react-icons/bi";
+import InteractiveImageOverlay from '../components/widgets/InteractiveImageOverlay';
 
 interface ModeControlProps {
     setMapType: (type: 'standard' | 'satellite') => void;
@@ -142,6 +143,7 @@ export default function CreateLocation() {
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [step, setStep] = useState<1 | 2>(1);
 
     // Tile layers for standard and satellite
   const standardLayer = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -170,19 +172,15 @@ export default function CreateLocation() {
 
     // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/svg+xml'];
-    if (!validTypes.includes(file.type)) {
-      setErrorMessage('Invalid file type. Please upload a JPG, PNG, or SVG file.');
-      setUploadedFile(null);
-      return;
-    }
 
     // Validate file size (5 MB = 5 * 1024 * 1024 bytes)
     const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      setErrorMessage('File size exceeds 5 MB. Please upload a smaller file.');
-      setUploadedFile(null);
-      return;
-    }
+
+    if (file.size <= maxSize && validTypes.includes(file.type)) {
+      setUploadedFile(file);
+      setErrorMessage(null);
+      setStep(2); // переходим на следующий шаг
+    }    
 
     // If validation passes, store the file and clear any error
     setUploadedFile(file);
@@ -192,47 +190,88 @@ export default function CreateLocation() {
   return (
     <div className="h-screen flex">
       {/* Sidebar */}
-      <div className="w-80 bg-white shadow-lg p-6">
-        <div className='flex justify-start gap-10 items-center mb-6'>
-            <button 
-                onClick={() => navigate('/')} 
-                className='text-blue-400 hover:text-blue-600 transition'
-            >
-                <FaArrowLeftLong size={28} />
-            </button>
-            <h2 className="text-xl">Create Location</h2>
+      <div className="w-96 h-full bg-white shadow-lg p-6 flex flex-col justify-between">
+        <div>
+          <div className='flex justify-start gap-10 items-center mb-6'>
+              <button 
+                  onClick={() => {if (step === 1) {navigate('/')} else {setStep(1); setUploadedFile(null);}}} 
+                  className='text-blue-400 hover:text-blue-600 transition'
+              >
+                  <FaArrowLeftLong size={28} />
+              </button>
+              <h2 className="text-xl">Create Location</h2>
+          </div>
+          {step === 1 && (
+            <>
+              <p className="text-sm text-gray-500 mb-2">STEP: 1 OF 2</p>
+              <p className="text-sm text-gray-700 mb-4">
+                Upload a file with indoor floor plan. This plan will be used as a map during navigation.
+              </p>
+              <div className="border-2 border-dashed border-blue-400 rounded p-6 text-center cursor-pointer hover:border-blue-600 transition">
+                <label htmlFor="file-upload" className="cursor-pointer">
+                    <p className='flex justify-center'><BiSolidImageAdd size={50} color="#60a5fa" /></p>
+                    <div className="text-blue-600 text-sm underline">UPLOAD FLOOR PLAN</div>
+                    <p className="text-xs text-gray-500 mt-2">Maximum size: 5 MB<br />JPG, PNG or SVG file</p>
+                </label>
+                <input
+                    id="file-upload"
+                    type="file"
+                    accept="image/jpeg,image/png,image/svg+xml"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                />
+                {uploadedFile && (
+                    <p className="text-xs text-green-600 mt-2">Uploaded: {uploadedFile.name}</p>
+                )}
+                {errorMessage && (
+                    <p className="text-xs text-red-600 mt-2">{errorMessage}</p>
+                )}
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <p className="text-sm text-gray-500 mb-2">STEP: 2 OF 2</p>
+              <p className="text-sm text-gray-700 mb-4">
+                Specify key locations (entrance, elevator, etc.) or draw navigation zones.
+              </p>
+              {/* Здесь можешь добавить форму или инструкции по выбору точек */}
+              <div className="bg-gray-100 border border-dashed border-blue-300 rounded p-4 text-center text-sm text-gray-600">
+                Interactive location tagging interface goes here...
+              </div>
+            </>
+          )}
         </div>
-        <p className="text-sm text-gray-500 mb-2">STEP: 1 OF 2</p>
-        <p className="text-sm text-gray-700 mb-4">Upload a file with indoor floor plan. This plan will be used as a map during navigation</p>
-        
-        <div className="border-2 border-dashed border-blue-400 rounded p-6 text-center cursor-pointer hover:border-blue-600 transition">
-            <label htmlFor="file-upload" className="cursor-pointer">
-                <p className='flex justify-center'><BiSolidImageAdd size={50} color="#60a5fa" /></p>
-                <div className="text-blue-600 text-sm underline">UPLOAD FLOOR PLAN</div>
-                <p className="text-xs text-gray-500 mt-2">Maximum size: 5 MB<br />JPG, PNG or SVG file</p>
-            </label>
-            <input
-                id="file-upload"
-                type="file"
-                accept="image/jpeg,image/png,image/svg+xml"
-                onChange={handleFileUpload}
-                className="hidden"
-            />
-            {uploadedFile && (
-                <p className="text-xs text-green-600 mt-2">Uploaded: {uploadedFile.name}</p>
-            )}
-            {errorMessage && (
-                <p className="text-xs text-red-600 mt-2">{errorMessage}</p>
-            )}
-        </div>
-        <div className='w-full flex mt-2'>
+        {step === 1 && (
+          <div className='w-full flex justify-center mt-2'>
             <button 
-                className="mt-6 w-72 py-1.5 px-14 text-sm border-2 outline-none border-blue-400 font-bold 
-                text-blue-400 hover:border-red-400 hover:text-red-400 transition duration-200"
+                onClick={() => navigate('/')}
+                className="mt-6 w-80 py-1.5 px-14 text-sm border-2 outline-none border-blue-400 font-bold 
+                text-blue-400 hover:border-red-400 hover:text-red-400 transition duration-200 rounded"
             >
                 Cancel
             </button>
-        </div>
+          </div>
+        )}
+        {step === 2 && (
+          <div className='flex justify-between mt-2'>
+            <button
+                onClick={() => {setStep(1)}}
+                className="py-2 px-8 text-sm border-2 outline-none border-blue-400 rounded text-nowrap
+                text-blue-400 hover:border-orange-400 hover:text-orange-400 transition duration-200"
+            >
+                Change Image
+            </button>
+            <button 
+                onClick={() => navigate('/')}
+                className="py-2 px-16 text-sm border-2 outline-none border-blue-400 rounded
+                text-blue-400 hover:border-green-400 hover:text-green-400 transition duration-200"
+            >
+                Save
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Map */}
@@ -253,6 +292,9 @@ export default function CreateLocation() {
                 : '© <a href="https://www.esri.com/">Esri</a>, USGS, NOAA'
             }
           />
+
+          <InteractiveImageOverlay uploadedFile={uploadedFile} userLocation={userLocation} />
+
           <ZoomControl />
           <CenterControl setUserLocation={setUserLocation} />
           <ModeControl setMapType={setMapType} />

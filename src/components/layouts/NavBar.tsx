@@ -48,28 +48,44 @@ export default function Navbar({darkMode, toggleDarkMode}: NavbarProps) {
         {/* Переключение темы */}
         <button
           onClick={toggleDarkMode}
-          className="text-xl text-gray-600 dark:text-gray-300 hover:text-yellow-500"
+          className="text-xl text-gray-600 dark:text-gray-300 hover:text-yellow-500 dark:hover:text-yellow-500"
         >
           {darkMode ? <FaSun /> : <FaMoon />}
         </button>
 
         {/* Уведомления */}
-        <button className="relative text-xl text-gray-600 dark:text-gray-300 hover:text-blue-600">
+        <button className="relative text-xl text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-500">
           <FaBell />
           <span className="absolute -top-2 -right-2 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping"></span>
         </button>
 
         {/* Профиль */}
         <div className="relative group cursor-pointer">
-          <div className="flex items-center text-gray-600 dark:text-gray-300 space-x-1 hover:text-blue-500">
+          <div
+            className="flex items-center text-gray-600 dark:text-gray-300 space-x-1 hover:text-blue-500 dark:hover:text-blue-500"
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
             <FaUserCircle className="text-2xl" />
             <IoIosArrowDown />
           </div>
-          <div className="absolute right-0 top-10 hidden group-hover:block bg-white dark:bg-gray-800 shadow-lg rounded-md w-40 py-2 z-50">
-            <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
+          <div
+            className="absolute right-0 top-10 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg rounded-md w-40 py-2 z-50"
+            role="menu"
+            aria-orientation="vertical"
+            aria-labelledby="profile-menu"
+          >
+            <button
+              className="block w-full text-left px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
+              role="menuitem"
+            >
               Profile
             </button>
-            <button className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+            <hr className="border-t border-gray-200 dark:border-gray-700" />
+            <button
+              className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
+              role="menuitem"
+            >
               Logout
             </button>
           </div>
