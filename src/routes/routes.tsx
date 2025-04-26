@@ -1,6 +1,8 @@
 import { Outlet, RouteObject } from "react-router-dom";
-import Layout from "../components/layouts/Layout";
 import { useEffect, useState } from "react";
+import Layout from "../components/layouts/Layout";
+import AuthGuard from "../components/guards/AuthGuard";
+import GuestGuard from "../components/guards/GuestGuard";
 import Dashboard from "../pages/Dashboard";
 import Buildings from "../pages/Buildings";
 import Floors from "../pages/Floors";
@@ -12,7 +14,11 @@ import Register from "../pages/Register";
 
 export const appRoutes: RouteObject[] = [
   {
-    element: <LayoutWrapper />, // все страницы с layout
+    element: (
+      <AuthGuard>
+        <LayoutWrapper />
+      </AuthGuard>
+    ),
     children: [
       {
         path: "/",
@@ -38,15 +44,27 @@ export const appRoutes: RouteObject[] = [
   },
   {
     path: "/create-location",
-    element: <CreateLocation />, // без layout
+    element: (
+      <AuthGuard>
+        <CreateLocation />
+      </AuthGuard>
+    ),
   },
   {
     path: "/login",
-    element: <Login />,
+    element: (
+      <GuestGuard>
+        <Login />
+      </GuestGuard>
+    ),
   },
   {
     path: "/register",
-    element: <Register />,
+    element: (
+      <GuestGuard>
+        <Register />
+      </GuestGuard>
+    ),
   },
 ];
 

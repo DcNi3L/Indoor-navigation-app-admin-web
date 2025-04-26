@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
+import Cookies from "js-cookie";
 import { FaBell, FaMoon, FaSun, FaUserCircle, FaUser } from "react-icons/fa";
 import { IoExit } from "react-icons/io5";
 import { IoIosArrowDown } from "react-icons/io";
 import { translations } from "../../utils/translations";
 import ProfileModal from "../ui/ProfileModal";
+import { getUserByEmail } from "../../services/api";
 
 interface NavbarProps {
   darkMode: boolean;
@@ -15,6 +17,7 @@ interface NavbarProps {
 export default function Navbar({darkMode, toggleDarkMode}: NavbarProps) {
   const [language, setLanguage] = useState<"EN" | "RU">("EN");
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [pictureUrl, setPictureUrl] = useState<string | null>(null);
   const t = translations[language]; 
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,6 +35,27 @@ export default function Navbar({darkMode, toggleDarkMode}: NavbarProps) {
   const toggleLanguage = () => {
     setLanguage(language === "EN" ? "RU" : "EN");
   };
+
+  const userEmail = Cookies.get('userEmail');
+  useEffect(() => {
+    if (userEmail) {
+      getUserByEmail(userEmail)
+        .then((user) => {
+          setPictureUrl(user.pictureUrl || "");
+        })
+        .catch((error) => {
+          console.error("Failed to load user profile image:", error);
+        });
+    }
+  }, [userEmail])
+
+  const logout = () => {
+    Cookies.remove('accessToken');
+    Cookies.remove('refreshToken');
+    Cookies.remove('userEmail');
+    navigate('/login');
+    window.location.href = "/login";
+  };  
 
   return (
     <nav className="bg-white fixed top-0 left-64 right-0 dark:bg-gray-900 shadow dark:shadow-gray-700 px-6 py-4 flex justify-between items-center transition-colors duration-300">
@@ -71,11 +95,21 @@ export default function Navbar({darkMode, toggleDarkMode}: NavbarProps) {
             aria-haspopup="true"
             aria-expanded="false"
           >
-            <FaUserCircle className="text-2xl" />
+            <div className="w-10 h-10 rounded-full text-white flex items-center justify-center text-3xl overflow-hidden">
+              {pictureUrl ? (
+                <img
+                  src={pictureUrl}
+                  alt="Profile"
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <FaUserCircle />
+              )}
+            </div>
             <IoIosArrowDown />
           </div>
           <div
-            className="absolute right-0 top-10 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg rounded-md w-40 py-2 z-50"
+            className="absolute right-0 top-12 mt-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg rounded-md w-40 py-2 z-50"
             role="menu"
             aria-orientation="vertical"
             aria-labelledby="profile-menu"
@@ -89,7 +123,7 @@ export default function Navbar({darkMode, toggleDarkMode}: NavbarProps) {
             </button>
             <hr className="border-t border-gray-200 dark:border-gray-700" />
             <button
-              onClick={() => {navigate('/login')}}
+              onClick={logout}
               className="flex gap-2 items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
               role="menuitem"
             >

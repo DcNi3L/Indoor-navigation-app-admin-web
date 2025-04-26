@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Cookies from "js-cookie";
 import { createPortal } from "react-dom";
 import { FaUserCircle, FaEdit, FaSave } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
+import { getUserByEmail } from "../../services/api";
 import { translations } from "../../utils/translations";
 
 interface ProfileModalProps {
@@ -13,6 +15,7 @@ interface ProfileModalProps {
 export default function ProfileModal({ isOpen, onClose, language }: ProfileModalProps) {
   const t = translations[language];
 
+  const [pictureUrl, setPictureUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState("John");
   const [lastName, setLastName] = useState("Doe");
@@ -20,6 +23,28 @@ export default function ProfileModal({ isOpen, onClose, language }: ProfileModal
   const [phone, setPhone] = useState("+123456789");
   const [birthDate, setBirthDate] = useState("1990-01-01");
   const [role, setRole] = useState("Administrator");
+
+  useEffect(() => {
+    if (isOpen) {
+      const userEmail = Cookies.get('userEmail');
+
+      if (userEmail) {
+        getUserByEmail(userEmail)
+          .then((user) => {
+            setPictureUrl(user.pictureUrl || "");
+            setFirstName(user.firstName || "");
+            setLastName(user.lastName || "");
+            setEmail(user.email || "");
+            setPhone(user.phone || "");
+            setBirthDate(user.birthDate || "");
+            setRole(user.roles ? user.roles.join(', ') : "");
+          })
+          .catch((error) => {
+            console.error("Failed to load user profile:", error);
+          });
+      }
+    }
+  }, [isOpen]);
 
   const handleSave = () => {
     setIsEditing(false);
@@ -39,6 +64,7 @@ export default function ProfileModal({ isOpen, onClose, language }: ProfileModal
       {/* Модальное окно */}
       <div className="fixed inset-0 z-[9999] flex items-center justify-center">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-3xl p-8 relative">
+          <h2 className="text-3xl tracking-wide font-bold text-gray-800 dark:text-white">{t.profile}</h2>
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-lg"
@@ -47,10 +73,17 @@ export default function ProfileModal({ isOpen, onClose, language }: ProfileModal
           </button>
 
           <div className="flex flex-col items-center mb-6">
-            <div className="w-24 h-24 rounded-full bg-gray-300 dark:bg-gray-700 text-white flex items-center justify-center text-5xl mb-3">
-              <FaUserCircle />
+            <div className="w-64 h-64 rounded-full bg-gray-300 dark:bg-gray-700 text-white flex items-center justify-center text-5xl mb-3 overflow-hidden">
+              {pictureUrl ? (
+                <img
+                  src={pictureUrl}
+                  alt="Profile"
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <FaUserCircle />
+              )}
             </div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">{t.profile}</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

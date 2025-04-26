@@ -10,9 +10,16 @@ import {
   FaCheckCircle,
   FaExclamationTriangle,
 } from "react-icons/fa";
+import { getFullBucketSize } from "../services/supabaseClient";
+import { useState } from "react";
 
 export default function Dashboard() {
+  const [size, setSize] = useState('0');
   const navigate = useNavigate();
+
+  getFullBucketSize('profile-images').then((result) => {
+    setSize(String(result ?? 0));
+  });
 
   return (
     <div className="p-6 space-y-6 mt-10 dark:bg-gray-900">
@@ -50,7 +57,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="Storage Size"
-          value="14.2MB"
+          value={`${size}MB / 50MB`}
           icon={<FaDatabase size={24} />}
           color="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800"
         />

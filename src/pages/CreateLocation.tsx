@@ -216,7 +216,7 @@ export default function CreateLocation() {
   
     const tryMapbox = async (): Promise<[number, number] | null> => {
       try {
-        const token = process.env.MAPBOX_API_TOKEN;
+        const token = process.env.REACT_APP_MAPBOX_API_TOKEN;
         const response = await fetch(
           `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${token}&limit=1`
         );

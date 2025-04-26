@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 import { FaSun, FaMoon } from "react-icons/fa";
 import { translations } from "../utils/translations";
+import api from "../services/api";
+import { scheduleTokenRefresh } from "../services/scheduleToken";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -9,27 +12,62 @@ export default function Login() {
   const [error, setError] = useState("");
   const [language, setLanguage] = useState<"EN" | "RU">("EN");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const navigate = useNavigate();
 
   const t = translations[language];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email || !password) {
-      setError("Please fill in all fields.");
-      return;
+  
+    try {
+      if (!email || !password) {
+        setError("Please fill in all fields.");
+        return;
+      }
+  
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setError("Please enter a valid email address.");
+        return;
+      }
+  
+      setError("");
+  
+      const response = await api.post('/admin/sign-in', {
+        email,
+        password,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (response.status === 200) {
+        const { accessToken, refreshToken } = response.data;
+  
+        // Сохраняем токены в cookies
+        Cookies.set('accessToken', accessToken, { expires: 3400 / 86400 });
+        Cookies.set('refreshToken', refreshToken, { expires: 7 });
+        Cookies.set('userEmail', email, { expires: 7 });
+  
+        scheduleTokenRefresh();
+  
+        navigate('/');
+        window.location.href = "/";
+      } else {
+        setError("Login failed.");
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+  
+      if (error.response) {
+        setError(error.response.data.message || 'Login failed.');
+      } else if (error.request) {
+        setError('No response from server.');
+      } else {
+        setError('Error setting up login request.');
+      }
     }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-
-    setError("");
-    console.log("Logging in:", { email, password });
-
-    // API login вызов здесь
   };
 
   const toggleDarkMode = () => {
@@ -95,6 +133,7 @@ export default function Login() {
 
           <button
             type="submit"
+            onClick={handleSubmit}
             className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded transition-all duration-300"
           >
             Login

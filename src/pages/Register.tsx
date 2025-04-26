@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../utils/cropImage";
 import { FaCamera, FaTrashAlt, FaEdit, FaSun, FaMoon } from "react-icons/fa";
+import api from "../services/api"
+import { supabase } from '../services/supabaseClient';
 import { translations } from "../utils/translations";
 
 export default function Register() {
@@ -17,6 +19,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [language, setLanguage] = useState<"EN" | "RU">("EN");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const navigate = useNavigate();
 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -59,40 +62,89 @@ export default function Register() {
     setTempPhoto(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName || !lastName || !email || !password || !confirmPassword || !profilePhoto) {
-      setError("Please fill in all fields.");
-      return;
+  
+    try {
+      // Валидация
+      if ([firstName, lastName, email, password, confirmPassword, profilePhoto].some(field => !field)) {
+        setError("Please fill in all fields.");
+        return;
+      }
+  
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setError("Please enter a valid email address.");
+        return;
+      }
+  
+      if (password !== confirmPassword) {
+        setError("Confirm password do not match.");
+        return;
+      }
+  
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&\-_.])[A-Za-z\d@$!%*?&\-_.]{8,}$/;
+
+      if (!passwordRegex.test(password)) {
+        setError("Password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
+        return;
+      }
+  
+      setError("");
+
+      let uploadedImageUrl = "";
+      if (profilePhoto) {
+        const fileExt = profilePhoto.name.split('.').pop();
+        const fileName = `${email}${Date.now()}.${fileExt}`;
+        const filePath = `panel/${fileName}`;
+  
+        const { error: uploadError } = await supabase.storage
+          .from('profile-images')
+          .upload(filePath, profilePhoto);
+  
+        if (uploadError) {
+          console.error("Supabase upload error:", uploadError);
+          setError("Failed to upload profile photo.");
+          return;
+        }
+  
+        const { data: publicUrlData } = supabase
+          .storage
+          .from('profile-images')
+          .getPublicUrl(filePath);
+  
+        uploadedImageUrl = publicUrlData.publicUrl;
+      }
+  
+      const response = await api.post('/admin/sign-up', {
+        "email": email,
+        "password": password,
+        "firstName": firstName,
+        "lastName": lastName,
+        "pictureUrl": uploadedImageUrl
+      }, 
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status === 200) {
+        navigate('/login');
+      } else {
+        setError("Registration failed.");
+      }
+    } catch (error: any) {
+      console.error('Register error:', error);
+  
+      if (error.response) {
+        setError(error.response.data.message || 'Registration failed.');
+      } else if (error.request) {
+        setError('No response from server.');
+      } else {
+        setError('Error setting up registration request.');
+      }
     }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-
-    setError("");
-
-    const formData = new FormData();
-    formData.append("firstName", firstName);
-    formData.append("lastName", lastName);
-    formData.append("email", email);
-    formData.append("password", password);
-    formData.append("profilePhoto", profilePhoto);
-
-    console.log("Submitting FormData:", Object.fromEntries(formData.entries()));
-    // fetch('/api/register', { method: 'POST', body: formData });
   };
 
   useEffect(() => {
@@ -279,6 +331,7 @@ export default function Register() {
 
           <button
             type="submit"
+            onClick={handleSubmit}
             className="w-full mt-6 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 rounded transition-all duration-300"
           >
             Register
