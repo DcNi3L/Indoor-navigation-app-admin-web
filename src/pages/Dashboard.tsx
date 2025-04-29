@@ -12,10 +12,16 @@ import {
 } from "react-icons/fa";
 import { getFullBucketSize } from "../services/supabaseClient";
 import { useState } from "react";
+import { getAllAdmins } from "../services/api";
 
 export default function Dashboard() {
   const [size, setSize] = useState('0');
+  const [adminCount, setAdminCount] = useState(0);
   const navigate = useNavigate();
+
+  getAllAdmins().then((data) => {
+    setAdminCount(data.length);
+  });
 
   getFullBucketSize('profile-images').then((result) => {
     setSize(String(result ?? 0));
@@ -51,7 +57,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="Admins"
-          value={2}
+          value={adminCount}
           icon={<FaUserCog size={24} />}
           color="bg-gradient-to-r from-purple-100 to-purple-200 dark:from-purple-700 dark:to-purple-800"
         />

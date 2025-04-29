@@ -424,7 +424,6 @@ export default function CreateLocation() {
                 Change Image
             </button>
             <button 
-                onClick={() => navigate('/')}
                 className="py-2 px-16 text-sm border-2 outline-none border-blue-400 rounded
                 text-blue-400 hover:border-green-400 hover:text-green-400 transition duration-200"
             >

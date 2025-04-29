@@ -3,6 +3,10 @@ import { useLocation, Link } from "react-router-dom";
 import { FaHome, FaBuilding, FaMap, FaRoute, FaQrcode } from "react-icons/fa";
 import { LuLayoutPanelLeft } from "react-icons/lu";
 
+interface SidebarProps {
+  isOpen: boolean;
+}
+
 interface SidebarItemProps {
   to: string;
   icon: JSX.Element;
@@ -26,7 +30,7 @@ function SidebarItem({ to, icon, label, active }: SidebarItemProps) {
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({isOpen}:SidebarProps) {
   const location = useLocation();
 
   // Список пунктов меню
@@ -39,7 +43,9 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="fixed top-0 left-0 w-64 h-screen bg-white dark:bg-gray-900 p-6 z-40 shadow-md dark:shadow-gray-700">
+    <aside className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-900 p-6 shadow-md dark:shadow-gray-700 transition-transform duration-300 z-50 ${
+      isOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"
+    }`}>
       {/* Заголовок */}
       <Link to={"/"} className="text-2xl font-bold mb-8 tracking-wide text-gray-800 dark:text-white flex gap-4 items-center">
         <LuLayoutPanelLeft size={30}/>

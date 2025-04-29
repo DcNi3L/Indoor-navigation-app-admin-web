@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import Cookies from "js-cookie";
-import { FaBell, FaMoon, FaSun, FaUserCircle, FaUser } from "react-icons/fa";
+import { FaBell, FaMoon, FaSun, FaUserCircle, FaUser, FaBars } from "react-icons/fa";
 import { IoExit } from "react-icons/io5";
 import { IoIosArrowDown } from "react-icons/io";
 import { translations } from "../../utils/translations";
@@ -12,15 +11,15 @@ import { getUserByEmail } from "../../services/api";
 interface NavbarProps {
   darkMode: boolean;
   toggleDarkMode: () => void;
+  toggleSidebar: () => void;
 }
 
-export default function Navbar({darkMode, toggleDarkMode}: NavbarProps) {
+export default function Navbar({darkMode, toggleDarkMode, toggleSidebar}: NavbarProps) {
   const [language, setLanguage] = useState<"EN" | "RU">("EN");
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [pictureUrl, setPictureUrl] = useState<string | null>(null);
   const t = translations[language]; 
   const location = useLocation();
-  const navigate = useNavigate();
 
   const getPageTitle = () => {
     const path = location.pathname;
@@ -53,12 +52,18 @@ export default function Navbar({darkMode, toggleDarkMode}: NavbarProps) {
     Cookies.remove('accessToken');
     Cookies.remove('refreshToken');
     Cookies.remove('userEmail');
-    navigate('/login');
     window.location.href = "/login";
   };  
 
   return (
     <nav className="bg-white fixed top-0 left-64 right-0 dark:bg-gray-900 shadow dark:shadow-gray-700 px-6 py-4 flex justify-between items-center transition-colors duration-300">
+      <button
+        onClick={toggleSidebar}
+        className="text-2xl text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 focus:outline-none mr-4"
+      >
+        <FaBars />
+      </button>
+      
       {/* Название текущей страницы */}
       <h1 className="text-2xl font-bold tracking-wider text-gray-800 dark:text-white">
         {getPageTitle()}

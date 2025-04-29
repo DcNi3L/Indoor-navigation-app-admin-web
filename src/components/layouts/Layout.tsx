@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Sidebar from "./SideBar";
 import Navbar from "./NavBar";
@@ -14,19 +14,25 @@ export default function Layout({ children, darkMode, toggleDarkMode }: LayoutPro
   const hiddenPaths = ["/create-location"];
   const shouldHideLayout = hiddenPaths.includes(location.pathname);
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setSidebarOpen(prev => !prev);
+  };
+
   return (
     <div className="flex">
       {/* Sidebar (отображается только если не скрыт) */}
-      {!shouldHideLayout && <Sidebar />}
+      {!shouldHideLayout && <Sidebar isOpen={sidebarOpen} />}
 
       {/* Основной контент */}
       <div
-        className={`w-full min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors ${
-          shouldHideLayout ? "" : "ml-64"
+        className={`w-full min-h-screen bg-gray-100 dark:bg-gray-900 transition-all duration-300 ${
+          !shouldHideLayout && sidebarOpen ? "ml-64" : "ml-0"
         }`}
       >
         {/* Navbar (только если не скрыт) */}
-        {!shouldHideLayout && <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}
+        {!shouldHideLayout && <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} toggleSidebar={toggleSidebar} />}
 
         {/* Контент страницы */}
         <main className={shouldHideLayout ? "" : "p-6"}>{children}</main>
