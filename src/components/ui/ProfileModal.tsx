@@ -3,7 +3,7 @@ import Cookies from "js-cookie";
 import { createPortal } from "react-dom";
 import { FaUserCircle, FaEdit, FaSave } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
-import { getUserByEmail } from "../../services/api";
+import { useUserByEmail } from "../../services/authApiService";
 import { translations } from "../../utils/translations";
 
 interface ProfileModalProps {
@@ -15,36 +15,31 @@ interface ProfileModalProps {
 export default function ProfileModal({ isOpen, onClose, language }: ProfileModalProps) {
   const t = translations[language];
 
+  const userEmail = Cookies.get('userEmail') ?? '';
+
+  const { data: user } = useUserByEmail(userEmail);
+  Cookies.set('userId', user?.id.toString(), { expires: 3400 / 86400 });
+
   const [pictureUrl, setPictureUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [firstName, setFirstName] = useState("John");
-  const [lastName, setLastName] = useState("Doe");
-  const [email, setEmail] = useState("john.doe@example.com");
-  const [phone, setPhone] = useState("+123456789");
-  const [birthDate, setBirthDate] = useState("1990-01-01");
-  const [role, setRole] = useState("Administrator");
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [role, setRole] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      const userEmail = Cookies.get('userEmail');
-
-      if (userEmail) {
-        getUserByEmail(userEmail)
-          .then((user) => {
-            setPictureUrl(user.pictureUrl || "");
-            setFirstName(user.firstName || "");
-            setLastName(user.lastName || "");
-            setEmail(user.email || "");
-            setPhone(user.phone || "");
-            setBirthDate(user.birthDate || "");
-            setRole(user.roles ? user.roles.join(', ') : "");
-          })
-          .catch((error) => {
-            console.error("Failed to load user profile:", error);
-          });
-      }
+    if (user) {
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+      setEmail(user.email || '');
+      setPhone(user.phone || '');
+      setBirthDate(user.birthDate || '');
+      setRole(user.role || 'ADMIN');
+      setPictureUrl(user.pictureUrl || null);
     }
-  }, [isOpen]);
+  }, [user]);
 
   const handleSave = () => {
     setIsEditing(false);
@@ -69,7 +64,7 @@ export default function ProfileModal({ isOpen, onClose, language }: ProfileModal
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-lg"
           >
-            <IoClose size={26}/>
+            <IoClose size={26} />
           </button>
 
           <div className="flex flex-col items-center mb-6">
@@ -140,9 +135,8 @@ function Field({
         disabled={!isEditing}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className={`w-full px-4 py-2.5 rounded border text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none ${
-          isEditing ? "focus:ring-2 focus:ring-blue-500" : ""
-        }`}
+        className={`w-full px-4 py-2.5 rounded border text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none ${isEditing ? "focus:ring-2 focus:ring-blue-500" : ""
+          }`}
       />
     </div>
   );

@@ -16,6 +16,7 @@ export const translations = {
       phone: "Phone Number",
       birthDate: "Birth Date",
       role: "Role",
+      admin: "Admin Page"
     },
     RU: {
       dashboard: "Панель",
@@ -33,6 +34,7 @@ export const translations = {
       phone: "Номер телефона",
       birthDate: "Дата рождения",
       role: "Роль",
+      admin: "Страница Админа"
     },
   };
   

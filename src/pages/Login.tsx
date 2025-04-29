@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 import { FaSun, FaMoon } from "react-icons/fa";
 import { translations } from "../utils/translations";
-import api from "../services/api";
+import { usePanelLogin } from "../services/authApiService";
 import { scheduleTokenRefresh } from "../services/scheduleToken";
 
 export default function Login() {
@@ -13,65 +13,50 @@ export default function Login() {
   const [language, setLanguage] = useState<"EN" | "RU">("EN");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const navigate = useNavigate();
+  const { mutateAsync: login } = usePanelLogin();
 
   const t = translations[language];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     try {
       if (!email || !password) {
         setError("Please fill in all fields.");
         return;
       }
-  
+    
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         setError("Please enter a valid email address.");
         return;
       }
-  
+    
       setError("");
-  
-      const response = await api.post('/admin/sign-in', {
-        email,
-        password,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-  
-      if (response.status === 200) {
-        const { accessToken, refreshToken } = response.data;
-  
-        // Сохраняем токены в cookies
-        Cookies.set('accessToken', accessToken, { expires: 3400 / 86400 });
-        Cookies.set('refreshToken', refreshToken, { expires: 7 });
-        Cookies.set('userEmail', email, { expires: 7 });
-  
-        scheduleTokenRefresh();
-  
-        navigate('/');
-        window.location.href = "/";
-      } else {
-        setError("Login failed.");
-      }
+    
+      const { accessToken, refreshToken } = await login({ email, password });
+    
+      Cookies.set('accessToken', accessToken, { expires: 3400 / 86400 });
+      Cookies.set('refreshToken', refreshToken, { expires: 7 });
+      Cookies.set('userEmail', email, { expires: 7 });
+    
+      scheduleTokenRefresh();
+    
+      navigate('/');
+      window.location.href = "/";
     } catch (error: any) {
       console.error('Login error:', error);
-  
-      if (error.response) {
-        setError(error.response.data.message || 'Login failed.');
-      } else if (error.request) {
-        setError('No response from server.');
-      } else {
-        setError('Error setting up login request.');
-      }
-    }
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Login failed. Please try again.';
+    
+      setError(message);
+    }    
   };
 
   const toggleDarkMode = () => {
-      setDarkMode((prev) => !prev);
+    setDarkMode((prev) => !prev);
   };
 
   useEffect(() => {

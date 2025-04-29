@@ -11,6 +11,7 @@ import QRPoints from "../pages/QRPoints";
 import CreateLocation from "../pages/CreateLocation";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import AdminProfile from "../pages/admins/AdminProfile";
 
 export const appRoutes: RouteObject[] = [
   {
@@ -39,6 +40,10 @@ export const appRoutes: RouteObject[] = [
       {
         path: "/qr",
         element: <QRPoints />,
+      },
+      {
+        path: "/admins/:id",
+        element: <AdminProfile />,
       },
     ],
   },

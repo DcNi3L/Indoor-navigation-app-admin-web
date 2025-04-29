@@ -8,6 +8,11 @@ import { FaArrowLeftLong, FaLocationDot } from "react-icons/fa6";
 import { FaSearch } from "react-icons/fa";
 import { BiSolidImageAdd } from "react-icons/bi";
 import InteractiveImageOverlay from '../components/widgets/InteractiveImageOverlay';
+import { supabase } from '../services/supabaseClient';
+import { buildingTypes } from '../utils/buildingTypes';
+import { useCreateBuilding, useCreateFloor, useBuildingsByUser } from "../services/useBuildingService";
+import toast from 'react-hot-toast';
+import Cookies from 'js-cookie';
 
 interface ModeControlProps {
     setMapType: (type: 'standard' | 'satellite') => void;
@@ -138,24 +143,42 @@ const createCustomIcon = () => {
 
 
 export default function CreateLocation() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { mutateAsync: createBuilding } = useCreateBuilding();
+  const { mutateAsync: createFloor } = useCreateFloor();
 
-    const [mapType, setMapType] = useState('standard');
-    const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [step, setStep] = useState<1 | 2>(1);
-    const [overlayCenter, setOverlayCenter] = useState<[number, number] | null>(null);
-    const [opacity, setOpacity] = useState<number>(0.8);
-    const [address, setAddress] = useState('');
-    const [dimensionWidth, setDimensionWidth] = useState<number>(0);
-    const [dimensionHeight, setDimensionHeight] = useState<number>(0);
-    console.log('Image center: ', overlayCenter);
+  useEffect(() => {
+    if (localStorage.getItem('theme') === 'dark') {
+      setIsDarkMode(true);
+    } else {
+      setIsDarkMode(false);
+    }
+  }, []);
+
+  const [mapType, setMapType] = useState('standard');
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [overlayCenter, setOverlayCenter] = useState<[number, number] | null>(null);
+  const [opacity, setOpacity] = useState<number>(0.8);
+  const [buildingId, setBuildingId] = useState<number>(0);
+  const [name, setName] = useState('House');
+  const [floorName, setFloorName] = useState('First Floor');
+  const [description, setDescription] = useState('My house');
+  const [address, setAddress] = useState('');
+  const [dimensionWidth, setDimensionWidth] = useState<number>(0);
+  const [dimensionHeight, setDimensionHeight] = useState<number>(0);
+  const [buildingType, setBuildingType] = useState("House");
+  const userId = Cookies.get('userId');
+  console.log('Image center: ', overlayCenter);
 
 
     // Tile layers for standard and satellite
-  const standardLayer = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-  const satelliteLayer = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  const standardLayer = `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}@2x.png?key=DZK1ZN9Z3qB6GJ8ORs9L`;
+  const satelliteLayer = 'https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=DZK1ZN9Z3qB6GJ8ORs9L';
+  const darkLayer = `https://api.mapbox.com/styles/v1/mapbox/navigation-night-v1/tiles/{z}/{x}/{y}?access_token=${process.env.REACT_APP_MAPBOX_API_TOKEN}`;
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -240,46 +263,110 @@ export default function CreateLocation() {
     } else {
       alert('Address not found in any source');
     }
-  };    
+  };
+  
+  const handleSave = async () => {
+    let uploadedImageUrl = "";
+    if (uploadedFile) {
+      const fileExt = uploadedFile.name.split('.').pop();
+      const fileName = `${buildingId}_${floorName}_${Date.now()}.${fileExt}`;
+      const filePath = `panel/floors/${fileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('profile-images')
+        .upload(filePath, uploadedFile);
+      if (uploadError) {
+        console.error("Supabase upload error:", uploadError);
+        toast.error("Failed to upload profile photo.");
+        return;
+      }
+      const { data: publicUrlData } = supabase
+        .storage
+        .from('profile-images')
+        .getPublicUrl(filePath);
+      uploadedImageUrl = publicUrlData.publicUrl;
+    }
+
+    if (!overlayCenter) {
+      toast.error("Please select a location on the map.");
+      return;
+    }
+  
+    try {
+      const building = await createBuilding({
+        name,
+        address,
+        userId,
+        description,
+        type: buildingType,
+        globalPosition: {
+          x: Number(overlayCenter[0].toFixed(8)),
+          y: Number(overlayCenter[1].toFixed(8)),
+        },
+      });
+  
+      setBuildingId(building?.data?.id);
+      if (!buildingId) {
+        toast.error("Building created but ID not returned");
+        return;
+      }
+  
+      toast.success("Building created");
+  
+      await createFloor({
+        buildingId,
+        name: floorName,
+        levelNumber: 1,
+        dimensionHeight,
+        dimensionWidth,
+        floorPictureUrl: uploadedImageUrl,
+      });
+  
+      toast.success("Floor created");
+    } catch (error) {
+      console.error("Error creating building/floor:", error);
+      toast.error("Failed to create building or floor");
+    }
+  };  
 
   return (
     <div className="h-screen flex">
       {/* Sidebar */}
-      <div className="w-96 h-full bg-white shadow-lg p-6 flex flex-col justify-between">
+      <div className="w-96 h-full bg-white dark:bg-gray-900 shadow-lg p-6 flex flex-col justify-between">
         <div>
-          <div className='flex justify-start gap-10 items-center mb-6'>
-              <button 
-                  onClick={() => {if (step === 1) {navigate('/')} else {setStep(1); setUploadedFile(null);}}} 
-                  className='text-blue-400 hover:text-blue-600 transition'
-              >
-                  <FaArrowLeftLong size={28} />
-              </button>
-              <h2 className="text-xl">Create Location</h2>
+          <div className="flex justify-start gap-10 items-center mb-6">
+            <button
+              onClick={() => { if (step === 1) { navigate('/') } else { setStep(1); setUploadedFile(null); } }}
+              className="text-blue-400 hover:text-blue-600 dark:text-blue-300 dark:hover:text-blue-400 transition"
+            >
+              <FaArrowLeftLong size={28} />
+            </button>
+            <h2 className="text-xl text-gray-800 dark:text-white">Create Location</h2>
           </div>
+
           {step === 1 && (
             <>
-              <p className="text-sm text-gray-500 mb-2">STEP: 1 OF 2</p>
-              <p className="text-sm text-gray-700 mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">STEP: 1 OF 2</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
                 Upload a file with indoor floor plan. This plan will be used as a map during navigation.
               </p>
-              <div className="border-2 border-dashed border-blue-400 rounded p-6 text-center cursor-pointer hover:border-blue-600 transition">
+              <div className="border-2 border-dashed border-blue-400 dark:border-blue-500 rounded p-6 text-center cursor-pointer hover:border-blue-600 dark:hover:border-blue-400 transition">
                 <label htmlFor="file-upload" className="cursor-pointer">
-                    <p className='flex justify-center'><BiSolidImageAdd size={50} color="#60a5fa" /></p>
-                    <div className="text-blue-600 text-sm underline">UPLOAD FLOOR PLAN</div>
-                    <p className="text-xs text-gray-500 mt-2">Maximum size: 5 MB<br />JPG, PNG or SVG file</p>
+                  <p className="flex justify-center"><BiSolidImageAdd size={50} color="#60a5fa" /></p>
+                  <div className="text-blue-600 dark:text-blue-400 text-sm underline">UPLOAD FLOOR PLAN</div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Maximum size: 5 MB<br />JPG, PNG or SVG file</p>
                 </label>
                 <input
-                    id="file-upload"
-                    type="file"
-                    accept="image/jpeg,image/png,image/svg+xml"
-                    onChange={handleFileUpload}
-                    className="hidden"
+                  id="file-upload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/svg+xml"
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
                 {uploadedFile && (
-                    <p className="text-xs text-green-600 mt-2">Uploaded: {uploadedFile.name}</p>
+                  <p className="text-xs text-green-600 mt-2">Uploaded: {uploadedFile.name}</p>
                 )}
                 {errorMessage && (
-                    <p className="text-xs text-red-600 mt-2">{errorMessage}</p>
+                  <p className="text-xs text-red-600 mt-2">{errorMessage}</p>
                 )}
               </div>
             </>
@@ -287,55 +374,58 @@ export default function CreateLocation() {
 
           {step === 2 && (
             <>
-              <p className="text-sm text-gray-500 mb-2">STEP: 2 OF 2</p>
-              <p className="text-sm text-gray-700 mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">STEP: 2 OF 2</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
                 Move, Scale or Rotate your floor plan to align it with the actual position on the map:
               </p>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Name</label>
                 <input
                   type="text"
-                  defaultValue="House"
-                  className="w-full px-3 py-2 text-sm bg-gray-100 rounded border border-gray-300"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600"
                 />
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Floor Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Floor Name</label>
                 <input
                   type="text"
-                  defaultValue="01"
-                  className="w-full px-3 py-2 text-sm bg-gray-100 rounded border border-gray-300"
+                  value={floorName}
+                  onChange={(e) => setFloorName(e.target.value)}
+                  className="w-full dark:text-gray-300 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600"
                 />
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
                 <textarea
-                  defaultValue="My house"
-                  className="w-full px-3 py-2 text-sm bg-gray-100 rounded border border-gray-300"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full dark:text-gray-300 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600"
                 ></textarea>
               </div>
 
               {/* Advanced Settings Toggle */}
-              <div className="border-t pt-4">
-                <details className="text-sm text-gray-600">
-                  <summary className="cursor-pointer select-none mb-2 font-medium">Advanced setting</summary>
+              <div className="border-t dark:border-gray-700 pt-4">
+                <details className="text-sm text-gray-600 dark:text-gray-300">
+                  <summary className="cursor-pointer select-none mb-2 dark:text-gray-200 font-medium">Advanced setting</summary>
                   <div className="max-h-64 overflow-y-auto overflow-x-hidden pr-1 pb-1">
                     <div className="mb-4">
-                      <label className="block text-sm mb-1">Address:</label>
+                      <label className="block text-sm dark:text-gray-200 mb-1">Address:</label>
                       <div className="flex">
                         <input
                           type="text"
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded-l"
+                          className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l"
                           placeholder="Search by address..."
                         />
                         <button
-                          onClick={handleAddressSearch} 
-                          className="px-3 bg-white border border-gray-300 rounded-r"
+                          onClick={handleAddressSearch}
+                          className="px-3 bg-white dark:text-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-r"
                         >
                           <FaSearch />
                         </button>
@@ -344,48 +434,69 @@ export default function CreateLocation() {
 
                     {/* Coordinates */}
                     <div className="mb-2">
-                      <label className="block text-sm mb-1">Latitude:</label>
+                      <label className="block text-sm dark:text-gray-200 mb-1">Latitude:</label>
                       <input
                         type="text"
                         value={overlayCenter ? overlayCenter[0].toFixed(8) : ''}
-                        className="w-full px-3 py-2 text-sm bg-gray-100 rounded border border-gray-300"
+                        className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded"
                       />
                     </div>
 
                     <div className="mb-2">
-                      <label className="block text-sm mb-1">Longitude:</label>
+                      <label className="block text-sm dark:text-gray-200 mb-1">Longitude:</label>
                       <input
                         type="text"
                         value={overlayCenter ? overlayCenter[1].toFixed(8) : ''}
-                        className="w-full px-3 py-2 text-sm bg-gray-100 rounded border border-gray-300"
+                        className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded"
                       />
                     </div>
 
                     {/* Dimensions */}
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm mb-1">Floor width (m):</label>
+                        <label className="block text-sm dark:text-gray-200 mb-1">Floor width (m):</label>
                         <input
                           type="number"
                           value={dimensionWidth}
                           onChange={(e) => setDimensionWidth(Number(e.target.value))}
-                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded"
+                          className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm mb-1">Floor height (m):</label>
+                        <label className="block text-sm dark:text-gray-200 mb-1">Floor height (m):</label>
                         <input
                           type="number"
                           value={dimensionHeight}
                           onChange={(e) => setDimensionHeight(Number(e.target.value))}
-                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded"
+                          className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded"
                         />
                       </div>
                     </div>
+                    
+                    {/* Building type radio */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2 dark:text-gray-200">Type:</label>
+                      <div className="flex justify-around">
+                        {buildingTypes.map((type) => (
+                          <label key={type.value} className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+                            <input
+                              type="radio"
+                              name="buildingType"
+                              value={type.value}
+                              checked={buildingType === type.value}
+                              onChange={(e) => setBuildingType(e.target.value)}
+                              className="accent-blue-500"
+                            />
+                            <span className={`${buildingType === type.value ? 'text-blue-500' : ''} text-sm`}>{type.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
 
+                    {/* Opacity range */}
                     <div className="mb-2">
-                      <label className="block text-sm mb-1 text-gray-600">
-                        Plan opacity <span className="text-blue-900 font-semibold">{Math.round(opacity * 100)}%</span>
+                      <label className="block text-sm mb-1 text-gray-600 dark:text-gray-200">
+                        Plan opacity <span className="text-blue-900 dark:text-blue-400 font-semibold">{Math.round(opacity * 100)}%</span>
                       </label>
                       <input
                         type="range"
@@ -403,31 +514,35 @@ export default function CreateLocation() {
             </>
           )}
         </div>
+
+        {/* Buttons */}
         {step === 1 && (
-          <div className='w-full flex justify-center mt-2'>
-            <button 
-                onClick={() => navigate('/')}
-                className="mt-6 w-80 py-1.5 px-14 text-sm border-2 outline-none border-blue-400 font-bold 
-                text-blue-400 hover:border-red-400 hover:text-red-400 transition duration-200 rounded"
+          <div className="w-full flex justify-center mt-2">
+            <button
+              onClick={() => navigate('/')}
+              className="mt-6 w-80 py-1.5 px-14 text-sm border-2 outline-none border-blue-400 font-bold
+              text-blue-400 hover:border-red-400 hover:text-red-400 dark:text-blue-300 dark:hover:text-red-400 transition duration-200 rounded"
             >
-                Cancel
+              Cancel
             </button>
           </div>
         )}
+
         {step === 2 && (
-          <div className='flex justify-between mt-2'>
+          <div className="flex justify-between mt-2">
             <button
-                onClick={() => {setStep(1); setUploadedFile(null);}}
-                className="py-2 px-8 text-sm border-2 outline-none border-blue-400 rounded text-nowrap
-                text-blue-400 hover:border-orange-400 hover:text-orange-400 transition duration-200"
+              onClick={() => { setStep(1); setUploadedFile(null); }}
+              className="py-2 px-8 text-sm border-2 outline-none border-blue-400 rounded text-nowrap
+              text-blue-400 hover:border-orange-400 hover:text-orange-400 dark:text-blue-300 dark:hover:text-orange-400 transition duration-200"
             >
-                Change Image
+              Change Image
             </button>
-            <button 
-                className="py-2 px-16 text-sm border-2 outline-none border-blue-400 rounded
-                text-blue-400 hover:border-green-400 hover:text-green-400 transition duration-200"
+            <button
+              onClick={handleSave}
+              className="py-2 px-16 text-sm border-2 outline-none border-blue-400 rounded
+              text-blue-400 hover:border-green-400 hover:text-green-400 dark:text-blue-300 dark:hover:text-green-400 transition duration-200"
             >
-                Save
+              Save
             </button>
           </div>
         )}
@@ -444,11 +559,19 @@ export default function CreateLocation() {
           zoomControl={false} // Disable default zoom control
         >
           <TileLayer
-            url={mapType === 'standard' ? standardLayer : satelliteLayer}
+            url={
+              mapType === 'satellite'
+                ? satelliteLayer
+                : isDarkMode
+                  ? darkLayer
+                  : standardLayer
+            }
             attribution={
-              mapType === 'standard'
-                ? '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                : '© <a href="https://www.esri.com/">Esri</a>, USGS, NOAA'
+              mapType === 'satellite'
+                ? '© <a href="https://cloud.maptiler.com/">Maptiler</a>'
+                : isDarkMode
+                  ? '© <a href="https://cloud.maptiler.com/">Maptiler</a>'
+                  : '© <a href="https://mapbox.com/">MapBox</a>'
             }
           />
 

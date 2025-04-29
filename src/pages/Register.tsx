@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../utils/cropImage";
 import { FaCamera, FaTrashAlt, FaEdit, FaSun, FaMoon } from "react-icons/fa";
-import api from "../services/api"
+import { usePanelRegister } from "../services/authApiService"
 import { supabase } from '../services/supabaseClient';
 import { translations } from "../utils/translations";
 
@@ -23,13 +23,15 @@ export default function Register() {
 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);  
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const onCropComplete = (_croppedArea: any, croppedAreaPixels: any) => {
     setCroppedAreaPixels(croppedAreaPixels);
-  };  
-  
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cropModalRef = useRef<HTMLDialogElement>(null);
+
+  const { mutateAsync: register } = usePanelRegister();
 
   const handlePhotoClick = () => {
     fileInputRef.current?.click();
@@ -46,7 +48,7 @@ export default function Register() {
 
   const handleCropAndSave = async () => {
     if (!tempPhoto || !croppedAreaPixels) return;
-  
+
     const croppedImage = await getCroppedImg(tempPhoto, croppedAreaPixels);
     if (croppedImage) {
       setProfilePhoto(croppedImage);
@@ -54,7 +56,7 @@ export default function Register() {
       cropModalRef.current?.close();
       setTempPhoto(null);
     }
-  };  
+  };
 
   const handleRemovePhoto = () => {
     setProfilePhoto(null);
@@ -64,32 +66,32 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     try {
       // Валидация
       if ([firstName, lastName, email, password, confirmPassword, profilePhoto].some(field => !field)) {
         setError("Please fill in all fields.");
         return;
       }
-  
+
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         setError("Please enter a valid email address.");
         return;
       }
-  
+
       if (password !== confirmPassword) {
         setError("Confirm password do not match.");
         return;
       }
-  
+
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&\-_.])[A-Za-z\d@$!%*?&\-_.]{8,}$/;
 
       if (!passwordRegex.test(password)) {
         setError("Password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
         return;
       }
-  
+
       setError("");
 
       let uploadedImageUrl = "";
@@ -97,46 +99,37 @@ export default function Register() {
         const fileExt = profilePhoto.name.split('.').pop();
         const fileName = `${email}${Date.now()}.${fileExt}`;
         const filePath = `panel/${fileName}`;
-  
+
         const { error: uploadError } = await supabase.storage
           .from('profile-images')
           .upload(filePath, profilePhoto);
-  
+
         if (uploadError) {
           console.error("Supabase upload error:", uploadError);
           setError("Failed to upload profile photo.");
           return;
         }
-  
+
         const { data: publicUrlData } = supabase
           .storage
           .from('profile-images')
           .getPublicUrl(filePath);
-  
+
         uploadedImageUrl = publicUrlData.publicUrl;
       }
-  
-      const response = await api.post('/admin/sign-up', {
-        "email": email,
-        "password": password,
-        "firstName": firstName,
-        "lastName": lastName,
-        "pictureUrl": uploadedImageUrl
-      }, 
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+
+      await register({
+        email,
+        password,
+        firstName,
+        lastName,
+        pictureUrl: uploadedImageUrl,
       });
 
-      if (response.status === 200) {
-        navigate('/login');
-      } else {
-        setError("Registration failed.");
-      }
+      navigate('/login');
     } catch (error: any) {
       console.error('Register error:', error);
-  
+
       if (error.response) {
         setError(error.response.data.message || 'Registration failed.');
       } else if (error.request) {
@@ -167,7 +160,7 @@ export default function Register() {
       html.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
-  }, [darkMode]);  
+  }, [darkMode]);
 
   const toggleLanguage = () => {
     setLanguage(language === "EN" ? "RU" : "EN");
@@ -178,9 +171,9 @@ export default function Register() {
       {/* Crop Modal */}
       <dialog ref={cropModalRef} className="rounded-lg backdrop:bg-black/50 p-6 border-none">
         {tempPhoto && (
-            <>
+          <>
             <div className="relative w-[300px] h-[300px] mx-auto overflow-hidden rounded-lg bg-gray-800">
-                <Cropper
+              <Cropper
                 image={tempPhoto}
                 crop={crop}
                 zoom={zoom}
@@ -188,29 +181,29 @@ export default function Register() {
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={onCropComplete}
-                />
+              />
             </div>
 
             <div className="flex justify-center gap-4 mt-4">
-                <button
+              <button
                 onClick={handleCropAndSave}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-                >
+              >
                 Crop and Save
-                </button>
-                <button
+              </button>
+              <button
                 onClick={() => {
-                    cropModalRef.current?.close();
-                    setTempPhoto(null);
+                  cropModalRef.current?.close();
+                  setTempPhoto(null);
                 }}
                 className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
-                >
+              >
                 Cancel
-                </button>
+              </button>
             </div>
-            </>
+          </>
         )}
-        </dialog>
+      </dialog>
 
       {/* Main Form */}
       <div className="bg-white dark:bg-gray-800 px-5 py-6 rounded-lg shadow-md w-full max-w-2xl transition-all duration-300 flex flex-col items-center">
@@ -224,41 +217,41 @@ export default function Register() {
           {/* Аватарка */}
           <div className="flex justify-center mb-8">
             <div className="relative group">
-            <div
+              <div
                 onClick={handlePhotoClick}
                 className="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden border-2 border-blue-500 flex items-center justify-center cursor-pointer"
-                >
+              >
                 {previewPhoto ? (
-                    <img
+                  <img
                     src={previewPhoto}
                     alt="Avatar Preview"
                     className="object-cover w-full h-full rounded-full"
-                    />
+                  />
                 ) : (
-                    <div className="text-gray-500 dark:text-gray-300 text-sm flex flex-col items-center">
+                  <div className="text-gray-500 dark:text-gray-300 text-sm flex flex-col items-center">
                     <FaCamera size={24} />
                     <span className="text-xs mt-1">Upload</span>
-                    </div>
+                  </div>
                 )}
-                </div>
+              </div>
 
               {previewPhoto && (
-              <div className="flex justify-center gap-6 mt-2">
+                <div className="flex justify-center gap-6 mt-2">
                   <button
-                  type="button"
-                  onClick={handlePhotoClick}
-                  className="flex items-center gap-2 text-blue-500 hover:text-blue-600"
+                    type="button"
+                    onClick={handlePhotoClick}
+                    className="flex items-center gap-2 text-blue-500 hover:text-blue-600"
                   >
-                  <FaEdit />
+                    <FaEdit />
                   </button>
                   <button
-                  type="button"
-                  onClick={handleRemovePhoto}
-                  className="flex items-center gap-2 text-red-400 hover:text-red-600"
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="flex items-center gap-2 text-red-400 hover:text-red-600"
                   >
-                  <FaTrashAlt />
+                    <FaTrashAlt />
                   </button>
-              </div>
+                </div>
               )}
 
               <input

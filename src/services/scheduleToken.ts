@@ -1,44 +1,49 @@
-import api from "./api";
+import { api } from './authApiService';
 import Cookies from 'js-cookie';
+import toast from 'react-hot-toast';
 
 let refreshIntervalId: ReturnType<typeof setInterval> | null = null;
 
+/**
+ * Автоматическое обновление accessToken с интервалом 3400 сек (до истечения)
+ */
 export const scheduleTokenRefresh = () => {
-  if (refreshIntervalId) {
-    clearInterval(refreshIntervalId);
-  }
+  if (refreshIntervalId) clearInterval(refreshIntervalId);
 
   refreshIntervalId = setInterval(async () => {
     const refreshToken = Cookies.get('refreshToken');
 
     if (!refreshToken) {
-      console.error('No refresh token available.');
+      toast.error('Refresh token not found. Logging out...');
       logout();
       return;
     }
 
     try {
-      const response = await api.get('/reissue-token', {
+      const { data } = await api.get('/reissue-token', {
         headers: {
           Authorization: `${refreshToken}`,
         },
       });
 
-      if (response.status === 200) {
-        const { accessToken } = response.data;
-        Cookies.set('accessToken', accessToken, { expires: 3400 / 86400 });
-        console.log('Access token refreshed successfully');
+      if (data?.accessToken) {
+        Cookies.set('accessToken', data.accessToken, { expires: 3400 / 86400 });
+        console.log('[Auth] Access token refreshed successfully');
       } else {
-        console.error('Failed to refresh token, logging out...');
+        toast.error('Access token missing in response');
         logout();
       }
-    } catch (error) {
-      console.error('Token refresh error:', error);
+    } catch (error: any) {
+      console.error('[Auth] Token refresh failed:', error);
+      toast.error('Session expired. Please log in again.');
       logout();
     }
-  }, 3400 * 1000);
+  }, 3400 * 1000); // ≈ 56 минут 40 сек
 };
 
+/**
+ * Остановить автообновление токена
+ */
 export const stopTokenRefresh = () => {
   if (refreshIntervalId) {
     clearInterval(refreshIntervalId);
@@ -46,9 +51,13 @@ export const stopTokenRefresh = () => {
   }
 };
 
-const logout = () => {
+/**
+ * Очистить токены и остановить автообновление
+ */
+export const logout = () => {
   Cookies.remove('accessToken');
   Cookies.remove('refreshToken');
   Cookies.remove('userEmail');
   stopTokenRefresh();
+  window.location.href = '/login';
 };

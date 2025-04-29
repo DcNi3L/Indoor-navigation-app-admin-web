@@ -1,9 +1,13 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { Toaster } from 'react-hot-toast';
 import './index.css';
 import App from './App';
 import { AuthProvider } from './components/context/AuthContext';
-import reportWebVitals from './reportWebVitals';
+import GlobalLoading from './components/ui/globalLoading';
+
+const queryClient = new QueryClient();
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -11,12 +15,11 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <App />
+      <QueryClientProvider client={queryClient}>
+        <Toaster position="top-right" reverseOrder={false} />
+        <GlobalLoading />
+        <App />
+      </QueryClientProvider>
     </AuthProvider>
   </React.StrictMode>
 );
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();

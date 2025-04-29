@@ -32,7 +32,7 @@ export default function Layout({ children, darkMode, toggleDarkMode }: LayoutPro
         }`}
       >
         {/* Navbar (только если не скрыт) */}
-        {!shouldHideLayout && <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} toggleSidebar={toggleSidebar} />}
+        {!shouldHideLayout && <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} toggleSidebar={toggleSidebar} isOpen={sidebarOpen} />}
 
         {/* Контент страницы */}
         <main className={shouldHideLayout ? "" : "p-6"}>{children}</main>

@@ -1,24 +1,29 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Cookies from "js-cookie";
-import { FaBell, FaMoon, FaSun, FaUserCircle, FaUser, FaBars } from "react-icons/fa";
+import { FaBell, FaMoon, FaSun, FaUserCircle, FaUser } from "react-icons/fa";
+import { LuPanelLeftClose, LuPanelLeftOpen  } from "react-icons/lu";
 import { IoExit } from "react-icons/io5";
 import { IoIosArrowDown } from "react-icons/io";
 import { translations } from "../../utils/translations";
 import ProfileModal from "../ui/ProfileModal";
-import { getUserByEmail } from "../../services/api";
+import { useUserByEmail } from "../../services/authApiService";
 
 interface NavbarProps {
   darkMode: boolean;
   toggleDarkMode: () => void;
   toggleSidebar: () => void;
+  isOpen: boolean;
 }
 
-export default function Navbar({darkMode, toggleDarkMode, toggleSidebar}: NavbarProps) {
+export default function Navbar({ darkMode, toggleDarkMode, toggleSidebar, isOpen }: NavbarProps) {
+  const userEmail = Cookies.get('userEmail') ?? '';
+  const { data: user } = useUserByEmail(userEmail);
+
   const [language, setLanguage] = useState<"EN" | "RU">("EN");
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [pictureUrl, setPictureUrl] = useState<string | null>(null);
-  const t = translations[language]; 
+  const t = translations[language];
   const location = useLocation();
 
   const getPageTitle = () => {
@@ -27,6 +32,7 @@ export default function Navbar({darkMode, toggleDarkMode, toggleSidebar}: Navbar
     if (path.startsWith("/floors")) return t.floors;
     if (path.startsWith("/routes")) return t.routes;
     if (path.startsWith("/qr")) return t.qrPoints;
+    if (path.startsWith("/admins")) return t.admin
     if (path === "/") return t.dashboard;
     return t.adminPanel;
   };
@@ -35,39 +41,35 @@ export default function Navbar({darkMode, toggleDarkMode, toggleSidebar}: Navbar
     setLanguage(language === "EN" ? "RU" : "EN");
   };
 
-  const userEmail = Cookies.get('userEmail');
   useEffect(() => {
     if (userEmail) {
-      getUserByEmail(userEmail)
-        .then((user) => {
-          setPictureUrl(user.pictureUrl || "");
-        })
-        .catch((error) => {
-          console.error("Failed to load user profile image:", error);
-        });
+      setPictureUrl(user?.pictureUrl || null);
     }
-  }, [userEmail])
+  }, [user?.pictureUrl, userEmail])
 
   const logout = () => {
     Cookies.remove('accessToken');
     Cookies.remove('refreshToken');
     Cookies.remove('userEmail');
+    Cookies.remove('userId');
     window.location.href = "/login";
-  };  
+  };
 
   return (
-    <nav className="bg-white fixed top-0 left-64 right-0 dark:bg-gray-900 shadow dark:shadow-gray-700 px-6 py-4 flex justify-between items-center transition-colors duration-300">
-      <button
-        onClick={toggleSidebar}
-        className="text-2xl text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 focus:outline-none mr-4"
-      >
-        <FaBars />
-      </button>
-      
-      {/* Название текущей страницы */}
-      <h1 className="text-2xl font-bold tracking-wider text-gray-800 dark:text-white">
-        {getPageTitle()}
-      </h1>
+    <nav className={`bg-white z-50 fixed top-0 ${ isOpen ? "left-64" : "left-0" } right-0 dark:bg-gray-900 shadow dark:shadow-gray-700 px-6 py-4 flex justify-between items-center transition-all duration-300`}>
+      <div className="flex gap-2 items-center">
+        <button
+          onClick={toggleSidebar}
+          className="text-2xl text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 focus:outline-none mr-4"
+        >
+          {isOpen ? <LuPanelLeftClose size={30} /> : <LuPanelLeftOpen size={30} />}
+        </button>
+
+        {/* Название текущей страницы */}
+        <h1 className="text-2xl font-bold tracking-wider text-gray-800 dark:text-white">
+          {getPageTitle()}
+        </h1>
+      </div>
 
       {/* Элементы управления */}
       <div className="flex items-center space-x-6">
