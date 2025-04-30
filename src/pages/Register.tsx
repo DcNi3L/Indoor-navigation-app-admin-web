@@ -66,6 +66,8 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let uploadedImageUrl = "";
+    let filePath = "";
 
     try {
       // Валидация
@@ -94,11 +96,10 @@ export default function Register() {
 
       setError("");
 
-      let uploadedImageUrl = "";
       if (profilePhoto) {
         const fileExt = profilePhoto.name.split('.').pop();
         const fileName = `${email}${Date.now()}.${fileExt}`;
-        const filePath = `panel/${fileName}`;
+        filePath = `panel/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('profile-images')
@@ -129,6 +130,18 @@ export default function Register() {
       navigate('/login');
     } catch (error: any) {
       console.error('Register error:', error);
+      if (filePath) {
+        const { error: removeError } = await supabase
+          .storage
+          .from('profile-images')
+          .remove([filePath]);
+  
+        if (removeError) {
+          console.warn("Failed to clean up uploaded image:", removeError);
+        } else {
+          console.log("Rolled back image upload:", filePath);
+        }
+      }
 
       if (error.response) {
         setError(error.response.data.message || 'Registration failed.');

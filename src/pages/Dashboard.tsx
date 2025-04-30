@@ -8,15 +8,22 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 import { FaBuilding, FaMap, FaRoute, FaQrcode, FaUserCog } from "react-icons/fa";
+import { useBuildingsByUser, useAllFloors } from "../services/useBuildingService";
+import Cookies from "js-cookie";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const userId = Cookies.get('userId') || '';
 
   // Получаем всех админов через React Query
   const { data: admins = [] } = useAllAdmins();
 
   // Получаем размер хранилища через React Query
   const { data: size = 0 } = useFullBucketSize('profile-images');
+
+  const { data: buildings = [] } = useBuildingsByUser(Number(userId));
+
+  const { data: floors = [] } = useAllFloors();
 
 
   const storageData = [
@@ -27,8 +34,8 @@ export default function Dashboard() {
   const colors = ['#FF0000', '#00FF00'];
 
   const buildingsData = [
-    { name: "Buildings", value: 3, to: "buildings" },
-    { name: "Floors", value: 7, to: "floors" },
+    { name: "Buildings", value: buildings.length, to: "buildings" },
+    { name: "Floors", value: floors.length, to: "floors" },
     { name: "Routes", value: 14, to: "routes" },
     { name: "QR Points", value: 20, to: "qr" },
   ];

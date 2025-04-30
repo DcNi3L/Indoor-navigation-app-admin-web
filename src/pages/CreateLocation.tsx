@@ -170,12 +170,11 @@ export default function CreateLocation() {
   const [address, setAddress] = useState('');
   const [dimensionWidth, setDimensionWidth] = useState<number>(0);
   const [dimensionHeight, setDimensionHeight] = useState<number>(0);
-  const [buildingType, setBuildingType] = useState("House");
+  const [buildingType, setBuildingType] = useState("HOUSE");
   const userId = Cookies.get('userId');
-  console.log('Image center: ', overlayCenter);
 
 
-    // Tile layers for standard and satellite
+  // Tile layers for standard and satellite
   const standardLayer = `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}@2x.png?key=DZK1ZN9Z3qB6GJ8ORs9L`;
   const satelliteLayer = 'https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=DZK1ZN9Z3qB6GJ8ORs9L';
   const darkLayer = `https://api.mapbox.com/styles/v1/mapbox/navigation-night-v1/tiles/{z}/{x}/{y}?access_token=${process.env.REACT_APP_MAPBOX_API_TOKEN}`;
@@ -267,32 +266,44 @@ export default function CreateLocation() {
   
   const handleSave = async () => {
     let uploadedImageUrl = "";
-    if (uploadedFile) {
-      const fileExt = uploadedFile.name.split('.').pop();
-      const fileName = `${buildingId}_${floorName}_${Date.now()}.${fileExt}`;
-      const filePath = `panel/floors/${fileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from('profile-images')
-        .upload(filePath, uploadedFile);
-      if (uploadError) {
-        console.error("Supabase upload error:", uploadError);
-        toast.error("Failed to upload profile photo.");
-        return;
-      }
-      const { data: publicUrlData } = supabase
-        .storage
-        .from('profile-images')
-        .getPublicUrl(filePath);
-      uploadedImageUrl = publicUrlData.publicUrl;
-    }
-
+    let filePath = "";
+  
     if (!overlayCenter) {
       toast.error("Please select a location on the map.");
       return;
     }
   
+    if (uploadedFile) {
+      const fileExt = uploadedFile.name.split('.').pop();
+      const fileName = `${floorName}_${Date.now()}.${fileExt}`;
+      filePath = `panel/floors/${fileName}`;
+  
+      const { error: uploadError } = await supabase.storage
+        .from('profile-images')
+        .upload(filePath, uploadedFile);
+  
+      if (uploadError) {
+        console.error("Supabase upload error:", uploadError);
+        toast.error("Failed to upload profile photo.");
+        return;
+      }
+  
+      const { data: publicUrlData } = supabase
+        .storage
+        .from('profile-images')
+        .getPublicUrl(filePath);
+
+      if (!publicUrlData?.publicUrl) {
+        console.error("Failed to generate public URL from Supabase.");
+        toast.error("Could not retrieve image URL.");
+        return;
+      }
+  
+      uploadedImageUrl = publicUrlData.publicUrl;
+    }
+  
     try {
-      const building = await createBuilding({
+      const buildingResponse = await createBuilding({
         name,
         address,
         userId,
@@ -304,16 +315,18 @@ export default function CreateLocation() {
         },
       });
   
-      setBuildingId(building?.data?.id);
-      if (!buildingId) {
+      const newBuildingId = buildingResponse?.data?.id;
+      if (!newBuildingId) {
         toast.error("Building created but ID not returned");
         return;
       }
   
+      setBuildingId(newBuildingId);
       toast.success("Building created");
   
+      console.log('picture: ', uploadedImageUrl);
       await createFloor({
-        buildingId,
+        buildingId: newBuildingId,
         name: floorName,
         levelNumber: 1,
         dimensionHeight,
@@ -322,11 +335,25 @@ export default function CreateLocation() {
       });
   
       toast.success("Floor created");
+      navigate('/');
     } catch (error) {
+      if (filePath) {
+        const { error: removeError } = await supabase
+          .storage
+          .from('profile-images')
+          .remove([filePath]);
+  
+        if (removeError) {
+          console.warn("Failed to clean up uploaded image:", removeError);
+        } else {
+          console.log("Rolled back image upload:", filePath);
+        }
+      }
+  
       console.error("Error creating building/floor:", error);
       toast.error("Failed to create building or floor");
     }
-  };  
+  };   
 
   return (
     <div className="h-screen flex">

@@ -22,7 +22,7 @@ export const scheduleTokenRefresh = () => {
     try {
       const { data } = await api.get('/reissue-token', {
         headers: {
-          Authorization: `${refreshToken}`,
+          Authorization: `Bearer ${refreshToken}`,
         },
       });
 
@@ -58,6 +58,7 @@ export const logout = () => {
   Cookies.remove('accessToken');
   Cookies.remove('refreshToken');
   Cookies.remove('userEmail');
+  Cookies.remove('userId');
   stopTokenRefresh();
   window.location.href = '/login';
 };

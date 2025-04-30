@@ -40,6 +40,7 @@ export const useBuildingsByUser = (userId: number) => {
 
 // ========== FLOORS ==========
 const createFloor = (data: any) => api.post('/floors', data);
+const getAllFloors = () => api.get('/floors').then((res) => res.data);
 const getFloorById = (id: number) => api.get(`/floors/${id}`).then(res => res.data);
 const getFloorsByBuildingId = (buildingId: number) => api.get(`/floors/by-building/${buildingId}`).then(res => res.data);
 const updateFloor = (id: number, data: any) => api.put(`/floors/${id}`, data);
@@ -59,6 +60,14 @@ export const useCreateFloor = () => {
     },
   });
 };
+
+export const useAllFloors = () => {
+  return useQuery({
+    queryKey: ['allFloors'],
+    queryFn: getAllFloors,
+  });
+};
+
 
 export const useFloorById = (id: number) => {
   return useQuery({

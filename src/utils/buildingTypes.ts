@@ -4,7 +4,8 @@ export interface BuildingTypeOption {
   }
   
   export const buildingTypes: BuildingTypeOption[] = [
-    { label: "House", value: "house" },
-    { label: "Educational", value: "educational" },
-    { label: "Medical", value: "medical" },
+    { value: "HOUSE", label: "House" },
+    { value: "EDUCATIONAL", label: "Educational" },
+    { value: "MEDICAL", label: "Medical" },
+    { value: "MAL", label: "Mall"},
   ];
