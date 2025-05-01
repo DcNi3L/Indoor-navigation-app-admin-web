@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 
 interface AdminCardProps {
   admins: any[];
@@ -7,6 +8,7 @@ interface AdminCardProps {
 
 export default function AdminCards({ admins }: AdminCardProps) {
   const [visibleCount, setVisibleCount] = useState(3);
+  const userEmail = Cookies.get("userEmail");
   const navigate = useNavigate();
 
   const handleShowMore = () => {
@@ -23,6 +25,7 @@ export default function AdminCards({ admins }: AdminCardProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
         {admins.slice(0, visibleCount).map((admin: any) => (
+          admin.email !== userEmail &&
           <div
             key={admin.id}
             onClick={() => navigate(`/admins/${admin.email}`)}
@@ -57,7 +60,7 @@ export default function AdminCards({ admins }: AdminCardProps) {
             Show More
           </button>
         </div>
-      ) : (
+      ) : (visibleCount <= 3 ? <></> :
         <div className="flex justify-center mt-6">
           <button
             onClick={handleShowLess}

@@ -1,16 +1,17 @@
 import { MapContainer, TileLayer, useMap, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import L from 'leaflet';
-import { useState, useEffect, useMemo } from 'react';
+import L from "leaflet";
+
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FaArrowLeftLong, FaLocationDot } from "react-icons/fa6";
 import { FaSearch } from "react-icons/fa";
 import { BiSolidImageAdd } from "react-icons/bi";
 import InteractiveImageOverlay from '../components/widgets/InteractiveImageOverlay';
 import { supabase } from '../services/supabaseClient';
 import { buildingTypes } from '../utils/buildingTypes';
-import { useCreateBuilding, useCreateFloor, useBuildingsByUser } from "../services/useBuildingService";
+import { useCreateBuilding, useCreateFloor, useFloorsByBuildingId } from "../services/useBuildingService";
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
 
@@ -19,15 +20,15 @@ interface ModeControlProps {
 }
 
 const MapCenter = ({ center }: { center: [number, number] | null }) => {
-    const map = useMap();
-  
-    useEffect(() => {
-      if (center) {
-        map.setView(center, 15); // Center the map on the user's location
-      }
-    }, [map, center]);
-  
-    return null;
+  const map = useMap();
+
+  useEffect(() => {
+    if (center) {
+      map.setView(center, 20);
+    }
+  }, [center, map]);
+
+  return null;
 };
 
 // Custom control for mode switching (Satellite/Standard)
@@ -65,6 +66,21 @@ const ModeControl = ({ setMapType }: ModeControlProps) => {
   
     return null;
 };
+
+const SetInitialView = ({
+  center,
+}: {
+  center: [number, number];
+}) => {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(center, 20);
+  }, [map, center]);
+
+  return null;
+};
+
   
 // Custom control for centering on user's location
 const CenterControl = ({ setUserLocation }: { setUserLocation: (latlng: [number, number] | null) => void }) => {
@@ -143,10 +159,16 @@ const createCustomIcon = () => {
 
 
 export default function CreateLocation() {
-  const navigate = useNavigate();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { mutateAsync: createBuilding } = useCreateBuilding();
   const { mutateAsync: createFloor } = useCreateFloor();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isEditMode = Boolean(location.state?.building);
+  const existingBuilding = isEditMode ? location.state.building : null;
+
+
+  const { data: floors = [] } = useFloorsByBuildingId(existingBuilding?.id || 0);
 
   useEffect(() => {
     if (localStorage.getItem('theme') === 'dark') {
@@ -156,7 +178,47 @@ export default function CreateLocation() {
     }
   }, []);
 
+  useEffect(() => {
+    if (isEditMode && existingBuilding) {
+      setName(existingBuilding.name || '');
+      setAddress(existingBuilding.address || '');
+      setDescription(existingBuilding.description || '');
+      setBuildingId(existingBuilding.id || 0);
+      setBuildingType(existingBuilding.type || 'HOUSE');
+  
+      if (existingBuilding.globalPosition) {
+        const { x, y } = existingBuilding.globalPosition;
+        const coords: [number, number] = [x, y];
+        setUserLocation(coords);
+        setOverlayCenter(coords);
+      }
+  
+      setStep(2);
+    }
+  }, [isEditMode, existingBuilding]);  
+
+  useEffect(() => {
+    if (isEditMode && floors.length > 0) {
+      const floor = floors[0];
+  
+      setFloorName(floor.name || 'First Floor');
+      setDimensionWidth(floor.dimensionWidth || 0);
+      setDimensionHeight(floor.dimensionHeight || 0);
+  
+      if (floor.floorPictureUrl) {
+        fetch(floor.floorPictureUrl)
+          .then(res => res.blob())
+          .then(blob => {
+            const file = new File([blob], 'floorplan.png', { type: blob.type });
+            setUploadedFile(file);
+          });
+      }
+    }
+  }, [isEditMode, floors]);  
+  
+
   const [mapType, setMapType] = useState('standard');
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -180,7 +242,14 @@ export default function CreateLocation() {
   const darkLayer = `https://api.mapbox.com/styles/v1/mapbox/navigation-night-v1/tiles/{z}/{x}/{y}?access_token=${process.env.REACT_APP_MAPBOX_API_TOKEN}`;
 
   useEffect(() => {
-    if (navigator.geolocation) {
+    if (mapInstance && userLocation) {
+      mapInstance.setView(userLocation, 20);
+    }
+  }, [mapInstance, userLocation]);  
+
+  useEffect(() => {
+    // Только если это новый объект (не редактирование)
+    if (!isEditMode && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
@@ -191,7 +260,7 @@ export default function CreateLocation() {
         }
       );
     }
-  }, []);
+  }, [isEditMode]);  
 
   const customIcon = useMemo(() => createCustomIcon(), []);
 
@@ -362,7 +431,7 @@ export default function CreateLocation() {
         <div>
           <div className="flex justify-start gap-10 items-center mb-6">
             <button
-              onClick={() => { if (step === 1) { navigate('/') } else { setStep(1); setUploadedFile(null); } }}
+              onClick={() => { if (step === 1) { navigate(-1) } else { setStep(1); setUploadedFile(null); } }}
               className="text-blue-400 hover:text-blue-600 dark:text-blue-300 dark:hover:text-blue-400 transition"
             >
               <FaArrowLeftLong size={28} />
@@ -546,7 +615,7 @@ export default function CreateLocation() {
         {step === 1 && (
           <div className="w-full flex justify-center mt-2">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate(-1)}
               className="mt-6 w-80 py-1.5 px-14 text-sm border-2 outline-none border-blue-400 font-bold
               text-blue-400 hover:border-red-400 hover:text-red-400 dark:text-blue-300 dark:hover:text-red-400 transition duration-200 rounded"
             >
@@ -578,13 +647,13 @@ export default function CreateLocation() {
       {/* Map */}
       <div className="flex-1 h-full w-full">
         <MapContainer
-          center={[51.505, -0.09]}
           zoom={20}
           scrollWheelZoom={true}
           className="h-full w-full z-0"
           style={{ height: '100%', width: '100%' }}
           zoomControl={false} // Disable default zoom control
         >
+          <SetInitialView center={userLocation ?? [51.505, -0.09]} />
           <TileLayer
             url={
               mapType === 'satellite'
@@ -611,12 +680,14 @@ export default function CreateLocation() {
               setDimensionHeight(h);
             }}
             opacity={opacity}
+            dimensionWidth={dimensionWidth}
+            dimensionHeight={dimensionHeight}
+            isEditMode={isEditMode}
           />
 
           <ZoomControl />
           <CenterControl setUserLocation={setUserLocation} />
           <ModeControl setMapType={setMapType} />
-          <MapCenter center={userLocation} />
           {userLocation && (
             <Marker position={userLocation} icon={customIcon}>
               <Popup>You are here!</Popup>

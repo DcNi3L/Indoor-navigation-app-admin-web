@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 import { FaSun, FaMoon } from "react-icons/fa";
 import { translations } from "../utils/translations";
-import { usePanelLogin } from "../services/authApiService";
+import { usePanelLogin, fetchUserByEmail } from "../services/authApiService";
 import { scheduleTokenRefresh } from "../services/scheduleToken";
 
 export default function Login() {
@@ -35,15 +35,19 @@ export default function Login() {
       setError("");
     
       const { accessToken, refreshToken } = await login({ email, password });
+      const { data: user } = await fetchUserByEmail(email);
     
       Cookies.set('accessToken', accessToken, { expires: 3400 / 86400 });
       Cookies.set('refreshToken', refreshToken, { expires: 7 });
       Cookies.set('userEmail', email, { expires: 7 });
+      Cookies.set('userId', user?.id.toString(), { expires: 3400 / 86400 });
     
       scheduleTokenRefresh();
     
-      navigate('/');
-      window.location.href = "/";
+      setTimeout(() => {
+        navigate('/');
+        window.location.href = "/";
+      }, 100);
     } catch (error: any) {
       console.error('Login error:', error);
       const message =

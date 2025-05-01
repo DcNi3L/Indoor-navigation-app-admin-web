@@ -1,5 +1,5 @@
 import { Marker, ImageOverlay, Rectangle } from 'react-leaflet';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 
 const markerIcon = new L.Icon({
@@ -18,10 +18,12 @@ const moveIcon = new L.DivIcon({
 
 type LatLngTuple = [number, number];
 
-const IMAGE_WIDTH_METERS = 900;
-const IMAGE_HEIGHT_METERS = 450;
+const metersToLatDelta = (meters: number): number => {
+  const earthRadius = 6378137;
+  return (meters / earthRadius) * (180 / Math.PI);
+};
 
-const metersToLatLngDelta = (meters: number, latitude: number): number => {
+const metersToLngDelta = (meters: number, latitude: number): number => {
   const earthRadius = 6378137;
   return (meters / earthRadius) * (180 / Math.PI) / Math.cos(latitude * Math.PI / 180);
 };
@@ -38,22 +40,34 @@ export default function InteractiveImageOverlay({
   onCenterChange,
   onDimensionsChange,
   opacity,
+  dimensionWidth,
+  dimensionHeight,
+  isEditMode,
 }: {
   uploadedFile: File | null;
   userLocation: LatLngTuple | null;
   onCenterChange?: (center: LatLngTuple) => void;
   onDimensionsChange?: (width: number, height: number) => void;
   opacity?: number;
+  dimensionWidth?: number;
+  dimensionHeight?: number;
+  isEditMode: boolean;
 }) {
+  const DEFAULT_WIDTH_METERS = 300;
+  const DEFAULT_HEIGHT_METERS = 250;
   const [topLeft, setTopLeft] = useState<LatLngTuple | null>(null);
   const [bottomRight, setBottomRight] = useState<LatLngTuple | null>(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (userLocation) {
+    if (userLocation && !initializedRef.current) {
       const [centerLat, centerLng] = userLocation;
 
-      const latDelta = metersToLatLngDelta(IMAGE_HEIGHT_METERS / 2, centerLat);
-      const lngDelta = metersToLatLngDelta(IMAGE_WIDTH_METERS / 2, centerLat);
+      const width = isEditMode && dimensionWidth ? dimensionWidth : DEFAULT_WIDTH_METERS;
+      const height = isEditMode && dimensionHeight ? dimensionHeight : DEFAULT_HEIGHT_METERS;
+
+      const latDelta = metersToLatDelta(height / 2);
+      const lngDelta = metersToLngDelta(width / 2, centerLat);
 
       const tl: LatLngTuple = [centerLat + latDelta, centerLng - lngDelta];
       const br: LatLngTuple = [centerLat - latDelta, centerLng + lngDelta];
@@ -63,8 +77,10 @@ export default function InteractiveImageOverlay({
 
       onCenterChange?.([centerLat, centerLng]);
       triggerDimensionChange(tl, br);
+
+      initializedRef.current = true;
     }
-  }, [userLocation]);
+  }, [dimensionHeight, dimensionWidth, onCenterChange, userLocation, isEditMode]);
 
   const getBounds = (): [LatLngTuple, LatLngTuple] => {
     if (!topLeft || !bottomRight) return [[0, 0], [0, 0]];

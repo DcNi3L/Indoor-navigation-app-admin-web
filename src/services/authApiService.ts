@@ -35,7 +35,7 @@ const registerPanelUser = async (data: {
   return response.data;
 };
 
-const fetchUserByEmail = async (email: string) => {
+export const fetchUserByEmail = async (email: string) => {
   try {
     const res = await api.get('/user', { params: { email } });
     return res.data;

@@ -18,7 +18,7 @@ export default function ProfileModal({ isOpen, onClose, language }: ProfileModal
   const userEmail = Cookies.get('userEmail') ?? '';
 
   const { data: user } = useUserByEmail(userEmail);
-  Cookies.set('userId', user?.id.toString(), { expires: 3400 / 86400 });
+  Cookies.set('userId', user?.id.toString(), { expires: 3400 / 86400 } );
 
   const [pictureUrl, setPictureUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);

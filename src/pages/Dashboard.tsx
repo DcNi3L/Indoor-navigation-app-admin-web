@@ -14,12 +14,14 @@ import Cookies from "js-cookie";
 export default function Dashboard() {
   const navigate = useNavigate();
   const userId = Cookies.get('userId') || '';
+  const userEmail = Cookies.get('userEmail') || '';
 
   // Получаем всех админов через React Query
   const { data: admins = [] } = useAllAdmins();
 
   // Получаем размер хранилища через React Query
-  const { data: size = 0 } = useFullBucketSize('profile-images');
+  const { data: result = 0 } = useFullBucketSize('profile-images');
+  let size = Number((result / (1024 * 1024)).toFixed(2));
 
   const { data: buildings = [] } = useBuildingsByUser(Number(userId));
 
@@ -103,7 +105,12 @@ export default function Dashboard() {
       </div>
 
       {/* Карточки админов */}
-      <AdminCards admins={admins} />
+      {Array.isArray(admins) &&
+        admins
+          .filter((admin: any) => admin.email !== userEmail)
+          .map((admin: any) => (
+            <AdminCards key={admin.id} admins={admin} />
+          ))}
 
       {/* Быстрые действия */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
@@ -114,22 +121,25 @@ export default function Dashboard() {
             color="bg-indigo-500 hover:bg-indigo-600"
             icon={<FaBuilding size={28} />}
             title="Add Building"
-            onClick={() => navigate("/create-location")}
+            onClick={() => navigate("/buildings")}
           />
           <ActionCard
             color="bg-green-500 hover:bg-green-600"
             icon={<FaMap size={28} />}
             title="Upload Floor"
+            onClick={() => navigate("/floors")}
           />
           <ActionCard
             color="bg-yellow-400 hover:bg-yellow-500"
             icon={<FaRoute size={28} />}
             title="Create Route"
+            onClick={() => navigate("/routes")}
           />
           <ActionCard
             color="bg-red-500 hover:bg-red-600"
             icon={<FaQrcode size={28} />}
             title="Scan QR"
+            onClick={() => navigate("/qr")}
           />
           <ActionCard
             color="bg-purple-500 hover:bg-purple-600"

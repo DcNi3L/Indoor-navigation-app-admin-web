@@ -1,9 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import api from './indoorApi';
 
 // ========== BUILDINGS ==========
 const createBuilding = (data: any) => api.post('/buildings', data);
+const getAllBuildings = () => api.get('/buildings').then((res) => res.data);
 const getBuildingById = (id: number) => api.get(`/buildings/${id}`).then(res => res.data);
 const getBuildingsByUser = (userId: number) => api.get(`/buildings/by-user/${userId}`).then(res => res.data);
 
@@ -22,6 +23,13 @@ export const useCreateBuilding = () => {
   });
 };
 
+export const useAllBuildings = () => {
+  return useQuery({
+    queryKey: ['allBuildings'],
+    queryFn: getAllBuildings,
+  });
+};
+
 export const useBuildingById = (id: number) => {
   return useQuery({
     queryKey: ['building', id],
@@ -30,11 +38,15 @@ export const useBuildingById = (id: number) => {
   });
 };
 
-export const useBuildingsByUser = (userId: number) => {
-  return useQuery({
+export const useBuildingsByUser = (
+  userId: number,
+  options?: Omit<UseQueryOptions<any[], Error>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<any[], Error>({
     queryKey: ['buildingsByUser', userId],
     queryFn: () => getBuildingsByUser(userId),
     enabled: !!userId,
+    ...options,
   });
 };
 

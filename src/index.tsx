@@ -14,12 +14,12 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <React.StrictMode>
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <Toaster position="top-right" reverseOrder={false} />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Toaster position="bottom-right" reverseOrder={false} />
         <GlobalLoading />
         <App />
-      </QueryClientProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   </React.StrictMode>
 );
