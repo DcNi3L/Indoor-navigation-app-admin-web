@@ -1,4 +1,4 @@
-import { JSX, useState } from "react";
+import { JSX, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import clsx from "clsx";
 import {
@@ -10,7 +10,7 @@ import {
   FaUniversity,
 } from "react-icons/fa";
 import { FaShop } from "react-icons/fa6";
-import { useAllBuildings } from "../services/useBuildingService";
+import { useAllBuildings, useDeleteBuilding } from "../services/useBuildingService";
 import { toast } from "react-hot-toast";
 
 const typeIconMap: Record<string, JSX.Element> = {
@@ -22,14 +22,45 @@ const typeIconMap: Record<string, JSX.Element> = {
 
 export default function Buildings() {
   const [filterType, setFilterType] = useState<string>("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const BUILDING_TYPES = ["ALL", "HOUSE", "MALL", "MEDICAL", "EDUCATIONAL"];
   const navigate = useNavigate();
 
   const { data: buildings = [], isLoading } = useAllBuildings()
 
-  const filteredBuildings = filterType === "ALL"
-  ? buildings
-  : buildings.filter((b: any) => b.type === filterType);
+  const buildingNames = useMemo(() => {
+      return buildings.map((b: any) => b.name).filter(Boolean);
+  }, [buildings]);
+  
+  const suggestions = useMemo(() => {
+    return buildingNames
+      .filter((name: any) =>
+        name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .slice(0, 5);
+  }, [searchTerm, buildingNames]);
+
+  const filteredBuildings = buildings.filter((b: any) => {
+    const matchesType = filterType === "ALL" || b.type === filterType;
+    const matchesSearch =
+      searchTerm.trim() === "" ||
+      b.name.toLowerCase().includes(searchTerm.toLowerCase());
+  
+    return matchesType && matchesSearch;
+  });  
+
+  const { mutateAsync: deleteBuilding } = useDeleteBuilding();
+  const handleDelete = async (e: React.MouseEvent, id: number) =>  {
+    e.stopPropagation();
+    try {
+      await deleteBuilding(id);
+      toast.success("Building deleted");
+    } catch (e) {
+      console.error("Delete failed:", e);
+      toast.error("Failed to delete building");
+    }
+  }
 
   return (
     <div className="p-6 space-y-6 mt-12 text-gray-900 dark:text-white">
@@ -39,12 +70,45 @@ export default function Buildings() {
           <h2 className="text-2xl font-bold tracking-tight text-indigo-700 dark:text-indigo-300">
             All Buildings
           </h2>
-          <button
-            onClick={() => navigate("/create-location")}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full shadow transition"
-          >
-            <FaPlus /> Start From Map
-          </button>
+          
+          <div className="flex items-center gap-4">
+            <div className="relative w-full sm:w-96">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                placeholder="Search by building name..."
+                className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm"
+              />
+              {showSuggestions && suggestions.length > 0 && (
+                <ul className="absolute z-10 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 mt-1 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                  {suggestions.map((suggestion: any) => (
+                    <li
+                      key={suggestion}
+                      onMouseDown={() => {
+                        setSearchTerm(suggestion);
+                        setShowSuggestions(false);
+                      }}
+                      className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                    >
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <button
+              onClick={() => navigate("/create-location")}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full shadow transition"
+            >
+              + Add Building
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -111,10 +175,7 @@ export default function Buildings() {
                     <FaEdit size={18} />
                   </button>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toast.error("Удаление ещё не реализовано");
-                    }}
+                    onClick={(e) => handleDelete(e, building.id)}
                     className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 transition"
                     title="Delete"
                   >

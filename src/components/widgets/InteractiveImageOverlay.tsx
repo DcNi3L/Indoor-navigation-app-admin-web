@@ -1,4 +1,4 @@
-import { Marker, ImageOverlay, Rectangle } from 'react-leaflet';
+import { Marker, ImageOverlay, Rectangle, useMapEvent  } from 'react-leaflet';
 import { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 
@@ -43,6 +43,8 @@ export default function InteractiveImageOverlay({
   dimensionWidth,
   dimensionHeight,
   isEditMode,
+  onOverlayClick,
+  scaleFactor = 1,
 }: {
   uploadedFile: File | null;
   userLocation: LatLngTuple | null;
@@ -52,6 +54,8 @@ export default function InteractiveImageOverlay({
   dimensionWidth?: number;
   dimensionHeight?: number;
   isEditMode: boolean;
+  onOverlayClick?: () => void;
+  scaleFactor?: number;
 }) {
   const DEFAULT_WIDTH_METERS = 300;
   const DEFAULT_HEIGHT_METERS = 250;
@@ -63,8 +67,8 @@ export default function InteractiveImageOverlay({
     if (userLocation && !initializedRef.current) {
       const [centerLat, centerLng] = userLocation;
 
-      const width = isEditMode && dimensionWidth ? dimensionWidth : DEFAULT_WIDTH_METERS;
-      const height = isEditMode && dimensionHeight ? dimensionHeight : DEFAULT_HEIGHT_METERS;
+      const width = (isEditMode && dimensionWidth ? dimensionWidth : DEFAULT_WIDTH_METERS) * scaleFactor;
+      const height = (isEditMode && dimensionHeight ? dimensionHeight : DEFAULT_HEIGHT_METERS) * scaleFactor;
 
       const latDelta = metersToLatDelta(height / 2);
       const lngDelta = metersToLngDelta(width / 2, centerLat);
@@ -86,6 +90,14 @@ export default function InteractiveImageOverlay({
     if (!topLeft || !bottomRight) return [[0, 0], [0, 0]];
     return [topLeft, bottomRight];
   };
+
+  // Проверка клика по схеме
+  useMapEvent("click", (e) => {
+    const bounds = L.latLngBounds(getBounds());
+    if (bounds.contains(e.latlng)) {
+      onOverlayClick?.();
+    }
+  });
 
   const getCenter = (): LatLngTuple => {
     if (!topLeft || !bottomRight) return [0, 0];
@@ -172,6 +184,11 @@ export default function InteractiveImageOverlay({
         bounds={getBounds()}
         opacity={opacity ?? 0.7}
         zIndex={50}
+        eventHandlers={{
+          click: () => {
+            onOverlayClick?.();
+          },
+        }}
       />
 
       <Rectangle bounds={getBounds()} pathOptions={{ color: 'blue', dashArray: '5, 5', fillOpacity: 0 }} />

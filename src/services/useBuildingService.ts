@@ -7,6 +7,8 @@ const createBuilding = (data: any) => api.post('/buildings', data);
 const getAllBuildings = () => api.get('/buildings').then((res) => res.data);
 const getBuildingById = (id: number) => api.get(`/buildings/${id}`).then(res => res.data);
 const getBuildingsByUser = (userId: number) => api.get(`/buildings/by-user/${userId}`).then(res => res.data);
+const patchBuilding = (id: number, data: any) => api.patch(`/buildings/${id}`, data); // частичное обновление
+const deleteBuilding = (id: number) => api.delete(`/buildings/${id}`);
 
 export const useCreateBuilding = () => {
   const queryClient = useQueryClient();
@@ -47,6 +49,36 @@ export const useBuildingsByUser = (
     queryFn: () => getBuildingsByUser(userId),
     enabled: !!userId,
     ...options,
+  });
+};
+
+export const usePatchBuilding = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => await patchBuilding(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allBuildings'] });
+      toast.success('Building partially updated');
+    },
+    onError: (error: any) => {
+      console.error('Error patching building:', error);
+      toast.error('Failed to patch building');
+    },
+  });
+};
+
+export const useDeleteBuilding = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => await deleteBuilding(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allBuildings'] });
+      toast.success('Building deleted successfully');
+    },
+    onError: (error: any) => {
+      console.error('Error deleting building:', error);
+      toast.error('Failed to delete building');
+    },
   });
 };
 
