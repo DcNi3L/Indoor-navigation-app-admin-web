@@ -141,11 +141,6 @@ export default function Dashboard() {
             title="Scan QR"
             onClick={() => navigate("/qr")}
           />
-          <ActionCard
-            color="bg-purple-500 hover:bg-purple-600"
-            icon={<FaUserCog size={28} />}
-            title="Manage Admins"
-          />
         </div>
       </div>
     </div>
