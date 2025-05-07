@@ -105,12 +105,7 @@ export default function Dashboard() {
       </div>
 
       {/* Карточки админов */}
-      {Array.isArray(admins) &&
-        admins
-          .filter((admin: any) => admin.email !== userEmail)
-          .map((admin: any) => (
-            <AdminCards key={admin.id} admins={admin} />
-          ))}
+      {Array.isArray(admins) && <AdminCards admins={admins} />}
 
       {/* Быстрые действия */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
