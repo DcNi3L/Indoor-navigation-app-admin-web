@@ -1,7 +1,7 @@
 import { JSX } from "react";
 import { useLocation, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { FaHome, FaBuilding, FaMap, FaRoute, FaQrcode } from "react-icons/fa";
-import { LuLayoutPanelLeft } from "react-icons/lu";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,11 +10,13 @@ interface SidebarProps {
 interface SidebarItemProps {
   to: string;
   icon: JSX.Element;
-  label: string;
+  labelKey: string;
   active: boolean;
 }
 
-function SidebarItem({ to, icon, label, active }: SidebarItemProps) {
+function SidebarItem({ to, icon, labelKey, active }: SidebarItemProps) {
+  const { t } = useTranslation();
+
   return (
     <Link
       to={to}
@@ -25,45 +27,52 @@ function SidebarItem({ to, icon, label, active }: SidebarItemProps) {
       }`}
     >
       {icon}
-      <span className="font-medium">{label}</span>
+      <span className="font-medium">{t(labelKey)}</span>
     </Link>
   );
 }
 
-export default function Sidebar({isOpen}:SidebarProps) {
+export default function Sidebar({ isOpen }: SidebarProps) {
   const location = useLocation();
+  const { t } = useTranslation();
 
-  // Список пунктов меню
   const menuItems = [
-    {to: "/", icon: <FaHome size={20} />, label: "Home"},
-    { to: "/buildings", icon: <FaBuilding size={20} />, label: "Buildings" },
-    { to: "/floors", icon: <FaMap size={20} />, label: "Floors" },
-    { to: "/routes", icon: <FaRoute size={20} />, label: "Routes" },
-    { to: "/qr", icon: <FaQrcode size={20} />, label: "QR Points" },
+    { to: "/", icon: <FaHome size={20} />, labelKey: "dashboard" },
+    { to: "/buildings", icon: <FaBuilding size={20} />, labelKey: "buildings" },
+    { to: "/floors", icon: <FaMap size={20} />, labelKey: "floors" },
+    { to: "/routes", icon: <FaRoute size={20} />, labelKey: "routes" },
+    { to: "/qr", icon: <FaQrcode size={20} />, labelKey: "qrPoints" },
   ];
 
   return (
-    <aside className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-900 p-6 shadow-md dark:shadow-gray-700 transition-transform duration-300 z-50 ${
-      isOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"
-    }`}>
+    <aside
+      className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-900 p-6 shadow-md dark:shadow-gray-700 transition-transform duration-300 z-50 ${
+        isOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"
+      }`}
+    >
       {/* Заголовок */}
-      <Link to={"/"} className="text-2xl font-bold mb-8 tracking-wide text-gray-800 dark:text-white flex gap-4 items-center">
-        <LuLayoutPanelLeft size={30}/>
-        Indoor Panel
+      <Link
+        to={"/"}
+        className="text-2xl font-bold mb-8 tracking-wide text-gray-800 dark:text-white flex gap-2 items-center"
+      >
+        <img src='/assets/logo.png' className="w-10 h-10 object-contain" alt="Logo" />
+        {t('appName')}
       </Link>
 
       {/* Меню */}
       <nav className="space-y-4">
         {menuItems.map((item) => {
           const isActive =
-            item.to === "/" ? location.pathname === "/" : location.pathname.startsWith(item.to);
+            item.to === "/"
+              ? location.pathname === "/"
+              : location.pathname.startsWith(item.to);
 
           return (
             <SidebarItem
               key={item.to}
               to={item.to}
               icon={item.icon}
-              label={item.label}
+              labelKey={item.labelKey}
               active={isActive}
             />
           );

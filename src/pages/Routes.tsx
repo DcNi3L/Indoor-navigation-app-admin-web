@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAllFloors, useAllBuildings } from "../services/useBuildingService";
 import FloorEditor from "../components/layouts/FloorEditor";
 import { toast } from "react-hot-toast";

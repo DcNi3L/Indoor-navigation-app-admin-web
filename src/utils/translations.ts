@@ -18,6 +18,7 @@ export const translations = {
       role: "Role",
       admin: "Admin Page"
     },
+    
     RU: {
       dashboard: "Панель",
       buildings: "Здания",

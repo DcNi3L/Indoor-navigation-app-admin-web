@@ -49,6 +49,7 @@ export const useFullBucketSize = (bucketName: string) => {
     queryKey: ['full-bucket-size', bucketName],
     queryFn: () => fetchFullBucketSize(bucketName),
     enabled: !!bucketName,
-    staleTime: 5 * 60 * 1000, // 5 минут кэширования
-  });
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 30 * 60 * 1000,
+  } as any);
 };

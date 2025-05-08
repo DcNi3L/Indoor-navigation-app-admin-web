@@ -1,24 +1,26 @@
 import { useIsFetching, useIsMutating } from '@tanstack/react-query';
 import { ClipLoader, PulseLoader, RingLoader } from 'react-spinners';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 export default function GlobalLoading() {
-  const isFetching = useIsFetching();   // active useQuery()
-  const isMutating = useIsMutating();   // active useMutation()
+  const { t } = useTranslation();
+  const isFetching = useIsFetching();
+  const isMutating = useIsMutating();
 
   const isLoading = isFetching > 0 || isMutating > 0;
 
   let Spinner = ClipLoader;
-  let text = 'Loading...';
+  let text = t('loading');
   let color = '#60a5fa'; // blue
 
   if (isMutating > 0) {
     Spinner = RingLoader;
-    text = 'Saving changes...';
+    text = t('saving');
     color = '#22c55e'; // green
   } else if (isFetching > 0) {
     Spinner = PulseLoader;
-    text = 'Fetching data...';
+    text = t('fetching');
     color = '#3b82f6'; // blue
   }
 

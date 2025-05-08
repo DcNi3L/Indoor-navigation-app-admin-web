@@ -2,33 +2,32 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 import { FaSun, FaMoon } from "react-icons/fa";
-import { translations } from "../utils/translations";
 import { usePanelLogin, fetchUserByEmail } from "../services/authApiService";
 import { scheduleTokenRefresh } from "../services/scheduleToken";
+import { useTranslation } from "react-i18next";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [language, setLanguage] = useState<"EN" | "RU">("EN");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const navigate = useNavigate();
   const { mutateAsync: login } = usePanelLogin();
 
-  const t = translations[language];
+  const { t, i18n } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       if (!email || !password) {
-        setError("Please fill in all fields.");
+        setError(t("errorFillFields"));
         return;
       }
     
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        setError("Please enter a valid email address.");
+        setError(t("errorInvalidEmail"));
         return;
       }
     
@@ -53,7 +52,7 @@ export default function Login() {
       const message =
         error?.response?.data?.message ||
         error?.message ||
-        'Login failed. Please try again.';
+        t("errorLoginFailed");
     
       setError(message);
     }    
@@ -75,7 +74,8 @@ export default function Login() {
   }, [darkMode]);
 
   const toggleLanguage = () => {
-    setLanguage(language === "EN" ? "RU" : "EN");
+    const newLang = i18n.language === "en" ? "ru" : "en";
+    i18n.changeLanguage(newLang);
   };
 
   return (
@@ -84,7 +84,7 @@ export default function Login() {
       {/* Форма */}
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md transition-all duration-300">
         <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">
-          Login
+          {t("loginTitle")}
         </h2>
 
         {error && (
@@ -94,13 +94,13 @@ export default function Login() {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="email">
-              Email
+              {t("emailLabel")}
             </label>
             <input
               id="email"
               type="email"
               className="w-full p-3 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600"
-              placeholder="you@example.com"
+              placeholder={t("emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -108,13 +108,13 @@ export default function Login() {
 
           <div className="mb-6">
             <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="password">
-              Password
+              {t("passwordLabel")}
             </label>
             <input
               id="password"
               type="password"
               className="w-full p-3 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600"
-              placeholder="********"
+              placeholder={t("passwordPlaceholder")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -125,14 +125,14 @@ export default function Login() {
             onClick={handleSubmit}
             className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded transition-all duration-300"
           >
-            Login
+            {t("loginButton")}
           </button>
         </form>
 
         <p className="mt-4 text-center text-gray-600 dark:text-gray-400">
-          Don’t have an account?{" "}
+          {t("noAccount")}{" "}
           <Link to="/register" className="text-blue-500 hover:underline">
-            Register
+            {t("registerLink")}
           </Link>
         </p>
 
@@ -145,7 +145,11 @@ export default function Login() {
             onClick={toggleLanguage}
             className="text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
           >
-            {language}
+            {i18n.language.toLowerCase() === "en" ? 
+              <img src="https://flagcdn.com/gb.svg" width="24" alt="EN" />
+              :
+              <img src="https://flagcdn.com/ru.svg" width="24" alt="RU" />
+            }
           </button>
 
           {/* Переключатель темы */}

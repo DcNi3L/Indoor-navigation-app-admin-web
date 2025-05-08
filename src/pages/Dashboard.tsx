@@ -7,39 +7,36 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
-import { FaBuilding, FaMap, FaRoute, FaQrcode, FaUserCog } from "react-icons/fa";
+import { FaBuilding, FaMap, FaRoute, FaQrcode } from "react-icons/fa";
 import { useBuildingsByUser, useAllFloors } from "../services/useBuildingService";
 import Cookies from "js-cookie";
+import { useTranslation } from "react-i18next";
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const userId = Cookies.get('userId') || '';
   const userEmail = Cookies.get('userEmail') || '';
 
-  // Получаем всех админов через React Query
   const { data: admins = [] } = useAllAdmins();
-
-  // Получаем размер хранилища через React Query
   const { data: result = 0 } = useFullBucketSize('profile-images');
-  let size = Number((result / (1024 * 1024)).toFixed(2));
-
+  let size = Number((result as any / (1024 * 1024)).toFixed(2));
   const { data: buildings = [] } = useBuildingsByUser(Number(userId));
-
   const { data: floors = [] } = useAllFloors();
-
+  const qrCodes = JSON.parse(localStorage.getItem("qrList") || "[]");
 
   const storageData = [
-    { name: 'Used', value: size },
-    { name: 'Free', value: 50 - size },
+    { name: t("used"), value: size },
+    { name: t("free"), value: 50 - size },
   ];
 
   const colors = ['#FF0000', '#00FF00'];
 
   const buildingsData = [
-    { name: "Buildings", value: buildings.length, to: "buildings" },
-    { name: "Floors", value: floors.length, to: "floors" },
-    { name: "Routes", value: 14, to: "routes" },
-    { name: "QR Points", value: 20, to: "qr" },
+    { name: t("buildings"), [t("value")]: buildings.length, to: "buildings" },
+    { name: t("floors"), [t("value")]: floors.length, to: "floors" },
+    { name: t("routes"), [t("value")]: 14, to: "routes" },
+    { name: t("qrPoints"), [t("value")]: qrCodes.length, to: "qr" },
   ];
 
   const barColors = [
@@ -55,17 +52,19 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Buildings/Floors/Routes/QR */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white tracking-wide mb-4">System Entities</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white tracking-wide mb-4">
+            {t("systemEntities")}
+          </h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={buildingsData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+              <Bar dataKey={t("value")} radius={[8, 8, 0, 0]}>
                 {buildingsData.map((entry, index) => (
                   <Cell 
-                    onClick={() => {navigate(`/${entry.to}`)}} 
+                    onClick={() => navigate(`/${entry.to}`)} 
                     key={`cell-${index}`} 
                     fill={barColors[index % barColors.length]}
                     className="cursor-pointer" />
@@ -77,7 +76,9 @@ export default function Dashboard() {
 
         {/* Хранилище */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white tracking-wide mb-4">Storage Usage</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white tracking-wide mb-4">
+            {t("storageUsage")}
+          </h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -99,7 +100,7 @@ export default function Dashboard() {
             </PieChart>
           </ResponsiveContainer>
           <div className="text-center mt-4 text-sm text-gray-600 dark:text-gray-400">
-            Used <span className="text-red-500">{size}MB</span> of <span className="text-green-500">50MB</span>
+            {t("used")} <span className="text-red-500">{size}MB</span> {t("of")} <span className="text-green-500">50MB</span>
           </div>
         </div>
       </div>
@@ -114,31 +115,33 @@ export default function Dashboard() {
 
       {/* Быстрые действия */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Quick Actions</h2>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">
+          {t("quickActions")}
+        </h2>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           <ActionCard
             color="bg-indigo-500 hover:bg-indigo-600"
             icon={<FaBuilding size={28} />}
-            title="Add Building"
+            title={t("addBuilding")}
             onClick={() => navigate("/buildings")}
           />
           <ActionCard
             color="bg-green-500 hover:bg-green-600"
             icon={<FaMap size={28} />}
-            title="Upload Floor"
+            title={t("uploadFloor")}
             onClick={() => navigate("/floors")}
           />
           <ActionCard
             color="bg-yellow-400 hover:bg-yellow-500"
             icon={<FaRoute size={28} />}
-            title="Create Route"
+            title={t("createRoute")}
             onClick={() => navigate("/routes")}
           />
           <ActionCard
             color="bg-red-500 hover:bg-red-600"
             icon={<FaQrcode size={28} />}
-            title="Scan QR"
+            title={t("scanQR")}
             onClick={() => navigate("/qr")}
           />
         </div>

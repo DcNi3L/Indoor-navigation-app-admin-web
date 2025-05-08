@@ -5,9 +5,10 @@ import getCroppedImg from "../utils/cropImage";
 import { FaCamera, FaTrashAlt, FaEdit, FaSun, FaMoon } from "react-icons/fa";
 import { usePanelRegister } from "../services/authApiService"
 import { supabase } from '../services/supabaseClient';
-import { translations } from "../utils/translations";
+import { useTranslation } from "react-i18next";
 
 export default function Register() {
+  const { t, i18n } = useTranslation();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
@@ -17,7 +18,6 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [language, setLanguage] = useState<"EN" | "RU">("EN");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const navigate = useNavigate();
 
@@ -72,25 +72,25 @@ export default function Register() {
     try {
       // Валидация
       if ([firstName, lastName, email, password, confirmPassword, profilePhoto].some(field => !field)) {
-        setError("Please fill in all fields.");
+        setError(t("errorFillFields"));
         return;
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        setError("Please enter a valid email address.");
+        setError(t("errorInvalidEmail"));
         return;
       }
 
       if (password !== confirmPassword) {
-        setError("Confirm password do not match.");
+        setError(t("errorPasswordMismatch"));
         return;
       }
 
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&\-_.])[A-Za-z\d@$!%*?&\-_.]{8,}$/;
 
       if (!passwordRegex.test(password)) {
-        setError("Password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
+        setError(t("errorWeakPassword"));
         return;
       }
 
@@ -107,7 +107,7 @@ export default function Register() {
 
         if (uploadError) {
           console.error("Supabase upload error:", uploadError);
-          setError("Failed to upload profile photo.");
+          setError(t("errorUploadPhoto"));
           return;
         }
 
@@ -130,6 +130,7 @@ export default function Register() {
       navigate('/login');
     } catch (error: any) {
       console.error('Register error:', error);
+      setError(t("errorRegistrationFailed"));
       if (filePath) {
         const { error: removeError } = await supabase
           .storage
@@ -176,7 +177,8 @@ export default function Register() {
   }, [darkMode]);
 
   const toggleLanguage = () => {
-    setLanguage(language === "EN" ? "RU" : "EN");
+    const newLang = i18n.language === "en" ? "ru" : "en";
+    i18n.changeLanguage(newLang);
   };
 
   return (
@@ -190,7 +192,7 @@ export default function Register() {
                 image={tempPhoto}
                 crop={crop}
                 zoom={zoom}
-                aspect={1} // квадратное соотношение
+                aspect={1}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={onCropComplete}
@@ -202,7 +204,7 @@ export default function Register() {
                 onClick={handleCropAndSave}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
               >
-                Crop and Save
+                {t("cropAndSave")}
               </button>
               <button
                 onClick={() => {
@@ -211,7 +213,7 @@ export default function Register() {
                 }}
                 className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
               >
-                Cancel
+                {t("cancel")}
               </button>
             </div>
           </>
@@ -221,7 +223,7 @@ export default function Register() {
       {/* Main Form */}
       <div className="bg-white dark:bg-gray-800 px-5 py-6 rounded-lg shadow-md w-full max-w-2xl transition-all duration-300 flex flex-col items-center">
         <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800 dark:text-white">
-          Create an account
+          {t("registerTitle")}
         </h2>
 
         {error && <div className="mb-6 text-red-500 text-center">{error}</div>}
@@ -243,7 +245,7 @@ export default function Register() {
                 ) : (
                   <div className="text-gray-500 dark:text-gray-300 text-sm flex flex-col items-center">
                     <FaCamera size={24} />
-                    <span className="text-xs mt-1">Upload</span>
+                    <span className="text-xs mt-1">{t("upload")}</span>
                   </div>
                 )}
               </div>
@@ -281,7 +283,7 @@ export default function Register() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* First Name */}
             <div>
-              <label className="block text-gray-700 dark:text-gray-300 mb-2">First Name</label>
+              <label className="block text-gray-700 dark:text-gray-300 mb-2">{t("firstName")}</label>
               <input
                 type="text"
                 value={firstName}
@@ -292,7 +294,7 @@ export default function Register() {
 
             {/* Last Name */}
             <div>
-              <label className="block text-gray-700 dark:text-gray-300 mb-2">Last Name</label>
+              <label className="block text-gray-700 dark:text-gray-300 mb-2">{t("lastName")}</label>
               <input
                 type="text"
                 value={lastName}
@@ -303,7 +305,7 @@ export default function Register() {
 
             {/* Email */}
             <div className="md:col-span-2">
-              <label className="block text-gray-700 dark:text-gray-300 mb-2">Email</label>
+              <label className="block text-gray-700 dark:text-gray-300 mb-2">{t("emailLabel")}</label>
               <input
                 type="email"
                 value={email}
@@ -314,7 +316,7 @@ export default function Register() {
 
             {/* Password */}
             <div>
-              <label className="block text-gray-700 dark:text-gray-300 mb-2">Password</label>
+              <label className="block text-gray-700 dark:text-gray-300 mb-2">{t("passwordLabel")}</label>
               <input
                 type="password"
                 value={password}
@@ -325,7 +327,7 @@ export default function Register() {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-gray-700 dark:text-gray-300 mb-2">Confirm Password</label>
+              <label className="block text-gray-700 dark:text-gray-300 mb-2">{t("confirmPassword")}</label>
               <input
                 type="password"
                 value={confirmPassword}
@@ -340,12 +342,12 @@ export default function Register() {
             onClick={handleSubmit}
             className="w-full mt-6 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 rounded transition-all duration-300"
           >
-            Register
+            {t("register")}
           </button>
         </form>
 
         <p className="mt-6 text-center text-gray-600 dark:text-gray-400">
-          Already have an account? <Link to="/login" className="text-blue-500 hover:underline">Login</Link>
+          {t("haveAccount")} <Link to="/login" className="text-blue-500 hover:underline">{t("loginButton")}</Link>
         </p>
 
         <hr className="w-full my-6 border-gray-300 dark:border-gray-600" />
@@ -357,7 +359,11 @@ export default function Register() {
             onClick={toggleLanguage}
             className="text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
           >
-            {language}
+            {i18n.language.toLowerCase() === "en" ? 
+              <img src="https://flagcdn.com/gb.svg" width="24" alt="EN" />
+              :
+              <img src="https://flagcdn.com/ru.svg" width="24" alt="RU" />
+            }
           </button>
 
           {/* Переключатель темы */}

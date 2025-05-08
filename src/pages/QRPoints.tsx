@@ -3,10 +3,20 @@ import { QRCodeCanvas } from "qrcode.react";
 import jsPDF from "jspdf";
 import JSZip from "jszip";
 import { saveAs } from "file-saver"
+import { useTranslation } from "react-i18next";
+import ReactDOM from "react-dom/client";
+
+
+interface QRItem {
+  label: string;
+  value: string;
+  image: string;
+}
 
 export default function QRPoints() {
+  const { t } = useTranslation();
   const [label, setLabel] = useState("");
-  const [qrList, setQrList] = useState<{ label: string; value: string }[]>([]);
+  const [qrList, setQrList] = useState<QRItem[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("qrList");
@@ -14,14 +24,46 @@ export default function QRPoints() {
   }, []);
   
   useEffect(() => {
-    localStorage.setItem("qrList", JSON.stringify(qrList));
+    if (qrList.length > 0) {
+      localStorage.setItem("qrList", JSON.stringify(qrList));
+    }
   }, [qrList]);  
 
   const handleGenerate = () => {
     if (!label.trim()) return;
-    setQrList([...qrList, { label, value: label }]);
-    setLabel("");
-  };
+
+    const tempContainer = document.createElement("div");
+    document.body.appendChild(tempContainer);
+
+    const qrElement = (
+      <QRCodeCanvas
+        value={label}
+        size={210}
+        level="H"
+        includeMargin
+      />
+    );
+
+    const root = ReactDOM.createRoot(tempContainer);
+    root.render(qrElement);
+
+    setTimeout(() => {
+      const canvas = tempContainer.querySelector("canvas") as HTMLCanvasElement;
+      if (canvas) {
+        const image = canvas.toDataURL("image/png");
+
+        const newQr = { label, value: label, image };
+        const updatedList = [...qrList, newQr];
+        setQrList(updatedList);
+
+        localStorage.setItem("qrList", JSON.stringify(updatedList));
+        setLabel("");
+      }
+
+      root.unmount();
+      document.body.removeChild(tempContainer);
+    }, 100);
+  };  
 
   const downloadPDF = (qrItem: { label: string; value: string }) => {
     const canvas = document.getElementById(`qr-${qrItem.value}`) as HTMLCanvasElement;
@@ -52,7 +94,7 @@ export default function QRPoints() {
     pdf.setTextColor("#333333");
     pdf.setFontSize(20);
     pdf.setFont("helvetica", "bold");
-    const title = "Indoor Navigation QR Code";
+    const title = t("qrCodeTitle");
     const titleWidth = pdf.getTextWidth(title);
     pdf.text(title, (pageWidth - titleWidth) / 2, 25);
   
@@ -67,7 +109,7 @@ export default function QRPoints() {
     // 🔹 Нижний текст
     pdf.setFontSize(12);
     pdf.setTextColor("#888888");
-    pdf.text("Scan this code inside the building to navigate to your destination.", pageWidth / 2, pageHeight - 20, {
+    pdf.text(t("qrCodeFooter"), pageWidth / 2, pageHeight - 20, {
       align: "center",
     });
   
@@ -114,7 +156,7 @@ export default function QRPoints() {
       pdf.setTextColor("#333333");
       pdf.setFontSize(20);
       pdf.setFont("helvetica", "bold");
-      const title = "Indoor Navigation QR Code";
+      const title = t("qrCodeTitle");
       const titleWidth = pdf.getTextWidth(title);
       pdf.text(title, (pageWidth - titleWidth) / 2, 25);
   
@@ -130,7 +172,7 @@ export default function QRPoints() {
       pdf.setFontSize(12);
       pdf.setTextColor("#888888");
       pdf.text(
-        "Scan this code inside the building to navigate to your destination.",
+        t("qrCodeFooter"),
         pageWidth / 2,
         pageHeight - 20,
         { align: "center" }
@@ -141,14 +183,14 @@ export default function QRPoints() {
     }
   
     const content = await zip.generateAsync({ type: "blob" });
-    saveAs(content, "qr_exports.zip");
+    saveAs(content, t("exportFileName"));
   };      
 
   return (
     <div className="p-6 mt-10 text-gray-900 dark:text-white max-w-4xl mx-auto">
-      <h1 className="text-3xl text-center my-2 font-bold mb-4">🧭 QR Points Generator</h1>
+      <h1 className="text-3xl text-center my-2 font-bold mb-4">🧭 {t("qrTitle")}</h1>
       <p className="mb-6 text-gray-600 dark:text-gray-300">
-        Quickly create and export QR codes for indoor navigation points. Use them for scanning at entry, elevation, or venue zones.
+      {t("qrDescription")}
       </p>
 
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
@@ -157,14 +199,14 @@ export default function QRPoints() {
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="Enter point label (e.g. Floor 1 - Entrance A)"
+            placeholder={t("qrPlaceholder")}
             className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"
           />
           <button
             onClick={handleGenerate}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow"
           >
-            Generate
+            {t("generate")}
           </button>
         </div>
 
@@ -201,13 +243,13 @@ export default function QRPoints() {
                       }}
                       className="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
                     >
-                      Download PNG
+                      {t("downloadPNG")}
                     </button>
                     <button
                       onClick={() => downloadPDF(qr)}
                       className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
                     >
-                      Export PDF
+                      {t("downloadPDF")}
                     </button>
                   </div>
                 </div>
@@ -215,13 +257,13 @@ export default function QRPoints() {
             </div>
           </div>
         )}
-        {qrList.length > 0 && (
+        {(qrList.length > 1) && (
           <div className="mt-6 flex justify-center">
             <button
               onClick={exportAllAsZip}
               className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded shadow"
             >
-              📁 Export All
+              📁 {t("exportAll")}
             </button>
           </div>
         )}

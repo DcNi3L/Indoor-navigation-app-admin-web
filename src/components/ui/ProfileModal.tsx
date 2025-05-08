@@ -4,21 +4,20 @@ import { createPortal } from "react-dom";
 import { FaUserCircle, FaEdit, FaSave } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 import { useUserByEmail } from "../../services/authApiService";
-import { translations } from "../../utils/translations";
+import { useTranslation } from "react-i18next"; // ✅ новый импорт
 
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  language: "EN" | "RU";
+  language: "EN" | "RU"; // можно оставить для других нужд
 }
 
-export default function ProfileModal({ isOpen, onClose, language }: ProfileModalProps) {
-  const t = translations[language];
+export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
+  const { t } = useTranslation(); // ✅ добавлено
 
   const userEmail = Cookies.get('userEmail') ?? '';
-
   const { data: user } = useUserByEmail(userEmail);
-  Cookies.set('userId', user?.id.toString(), { expires: 3400 / 86400 } );
+  Cookies.set('userId', user?.id.toString(), { expires: 3400 / 86400 });
 
   const [pictureUrl, setPictureUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -50,16 +49,16 @@ export default function ProfileModal({ isOpen, onClose, language }: ProfileModal
 
   return createPortal(
     <>
-      {/* Overlay размытый фон */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
         onClick={onClose}
       ></div>
 
-      {/* Модальное окно */}
       <div className="fixed inset-0 z-[9999] flex items-center justify-center">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-3xl p-8 relative">
-          <h2 className="text-3xl tracking-wide font-bold text-gray-800 dark:text-white">{t.profile}</h2>
+          <h2 className="text-3xl tracking-wide font-bold text-gray-800 dark:text-white">
+            {t("profile")}
+          </h2>
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-lg"
@@ -82,12 +81,12 @@ export default function ProfileModal({ isOpen, onClose, language }: ProfileModal
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label={t.firstName} value={firstName} setValue={setFirstName} isEditing={isEditing} />
-            <Field label={t.lastName} value={lastName} setValue={setLastName} isEditing={isEditing} />
-            <Field label="Email" value={email} setValue={setEmail} isEditing={isEditing} />
-            <Field label={t.phone} value={phone} setValue={setPhone} isEditing={isEditing} />
-            <Field label={t.birthDate} value={birthDate} setValue={setBirthDate} isEditing={isEditing} type="date" />
-            <Field label={t.role} value={role} setValue={setRole} isEditing={isEditing} />
+            <Field label={t("firstName")} value={firstName} setValue={setFirstName} isEditing={isEditing} />
+            <Field label={t("lastName")} value={lastName} setValue={setLastName} isEditing={isEditing} />
+            <Field label={t("email")} value={email} setValue={setEmail} isEditing={isEditing} />
+            <Field label={t("phone")} value={phone} setValue={setPhone} isEditing={isEditing} />
+            <Field label={t("birthDate")} value={birthDate} setValue={setBirthDate} isEditing={isEditing} type="date" />
+            <Field label={t("role")} value={role} setValue={setRole} isEditing={isEditing} />
           </div>
 
           <div className="flex justify-center mt-6">
@@ -96,21 +95,21 @@ export default function ProfileModal({ isOpen, onClose, language }: ProfileModal
                 onClick={handleSave}
                 className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded"
               >
-                <FaSave /> {t.save}
+                <FaSave /> {t("save")}
               </button>
             ) : (
               <button
                 onClick={() => setIsEditing(true)}
                 className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded"
               >
-                <FaEdit /> {t.edit}
+                <FaEdit /> {t("edit")}
               </button>
             )}
           </div>
         </div>
       </div>
     </>,
-    document.body // --- создаем портал в body
+    document.body
   );
 }
 

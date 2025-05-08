@@ -2,7 +2,6 @@ import { JSX, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import clsx from "clsx";
 import {
-  FaPlus,
   FaEdit,
   FaTrash,
   FaHome,
@@ -12,6 +11,7 @@ import {
 import { FaShop } from "react-icons/fa6";
 import { useAllBuildings, useDeleteBuilding } from "../services/useBuildingService";
 import { toast } from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 const typeIconMap: Record<string, JSX.Element> = {
   HOUSE: <FaHome className="text-indigo-600 text-6xl w-60 h-60" />,
@@ -26,6 +26,7 @@ export default function Buildings() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const BUILDING_TYPES = ["ALL", "HOUSE", "MALL", "MEDICAL", "EDUCATIONAL"];
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const { data: buildings = [], isLoading } = useAllBuildings()
 
@@ -55,10 +56,10 @@ export default function Buildings() {
     e.stopPropagation();
     try {
       await deleteBuilding(id);
-      toast.success("Building deleted");
+      toast.success(t("buildingDeleted"));
     } catch (e) {
       console.error("Delete failed:", e);
-      toast.error("Failed to delete building");
+      toast.error(t("buildingDeleteError"));
     }
   }
 
@@ -68,7 +69,7 @@ export default function Buildings() {
       <div className="bg-gradient-to-br from-indigo-50 dark:from-gray-800 to-white dark:to-gray-900 p-6 px-12 rounded-2xl shadow-lg border border-indigo-100 dark:border-gray-700 transition-all">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold tracking-tight text-indigo-700 dark:text-indigo-300">
-            All Buildings
+            {t("allBuildings")}
           </h2>
           
           <div className="flex items-center gap-4">
@@ -81,7 +82,7 @@ export default function Buildings() {
                   setShowSuggestions(true);
                 }}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder="Search by building name..."
+                placeholder={t("searchPlaceholder")}
                 className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm"
               />
               {showSuggestions && suggestions.length > 0 && (
@@ -106,7 +107,7 @@ export default function Buildings() {
               onClick={() => navigate("/create-location")}
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full shadow transition"
             >
-              + Add Building
+              + {t("addBuilding")}
             </button>
           </div>
         </div>
@@ -124,7 +125,7 @@ export default function Buildings() {
                   : "bg-gray-100 dark:bg-gray-700 text-gray-700 hover:scale-110 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600"
               )}
             >
-              {type === "ALL" ? "All" : type.charAt(0) + type.slice(1).toLowerCase()}
+              {type === "ALL" ? t("all") : t(type.toLowerCase())}
             </button>
           ))}
         </div>
@@ -133,9 +134,9 @@ export default function Buildings() {
       {/* Display Buildings */}
       <div>
         {isLoading ? (
-          <p className="text-gray-500 px-12 dark:text-gray-400">Loading...</p>
+          <p className="text-gray-500 px-12 dark:text-gray-400">{t("loading")}</p>
         ) : buildings.length === 0 ? (
-          <p className="text-gray-500 px-12 dark:text-gray-400">No buildings found.</p>
+          <p className="text-gray-500 px-12 dark:text-gray-400">{t("noBuildings")}</p>
         ) : (
           <div className="grid gap-6 px-12 sm:grid-cols-2 lg:grid-cols-3">
             {filteredBuildings.map((building: any) => (
@@ -170,14 +171,14 @@ export default function Buildings() {
                       navigate("/create-location", { state: { building } });
                     }}
                     className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-600 transition"
-                    title="Edit"
+                    title={t("edit")}
                   >
                     <FaEdit size={18} />
                   </button>
                   <button
                     onClick={(e) => handleDelete(e, building.id)}
                     className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 transition"
-                    title="Delete"
+                    title={t("delete")}
                   >
                     <FaTrash size={18} />
                   </button>

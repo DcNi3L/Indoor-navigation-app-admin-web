@@ -4,8 +4,10 @@ import { FaEdit, FaTrash } from "react-icons/fa";
 import { useAllFloors, useDeleteFloor, useAllBuildings } from "../services/useBuildingService";
 import clsx from "clsx";
 import { toast } from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 export default function Floors() {
+  const { t } = useTranslation();
   const [buildingFilter, setBuildingFilter] = useState<string>("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -43,10 +45,10 @@ export default function Floors() {
     e.stopPropagation();
     try {
       await deleteFloor(id);
-      toast.success("Floor deleted");
+      toast.success(t("floorDeleted"));
     } catch (e) {
       console.error("Delete failed:", e);
-      toast.error("Failed to delete floor");
+      toast.error(t("floorDeleteError"));
     }
   };
 
@@ -56,7 +58,7 @@ export default function Floors() {
       <div className="bg-gradient-to-br from-indigo-50 dark:from-gray-800 to-white dark:to-gray-900 p-6 px-12 rounded-2xl shadow-lg border border-indigo-100 dark:border-gray-700 transition-all">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold tracking-tight text-indigo-700 dark:text-indigo-300">
-            All Floors
+            {t("allFloors")}
           </h2>
 
           <div className="flex items-center gap-4">
@@ -69,7 +71,7 @@ export default function Floors() {
                   setShowSuggestions(true);
                 }}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder="Search by building name..."
+                placeholder={t("searchPlaceholder")}
                 className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm"
               />
               {showSuggestions && suggestions.length > 0 && (
@@ -94,7 +96,7 @@ export default function Floors() {
               onClick={() => navigate("/create-location")}
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full shadow transition"
             >
-              + Add Floor
+              + {t("addFloor")}
             </button>
           </div>
         </div>
@@ -112,7 +114,7 @@ export default function Floors() {
                   : "bg-gray-100 dark:bg-gray-700 text-gray-700 hover:scale-110 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600"
               )}
             >
-              {type === "ALL" ? "All" : type.charAt(0) + type.slice(1).toLowerCase()}
+              {t(type.toLowerCase())}
             </button>
           ))}
         </div>
@@ -121,62 +123,60 @@ export default function Floors() {
       {/* Floor Cards */}
       <div>
         {isLoading ? (
-          <p className="text-gray-500 px-12 dark:text-gray-400">Loading...</p>
+          <p className="text-gray-500 px-12 dark:text-gray-400">{t("loading")}</p>
         ) : filteredFloors.length === 0 ? (
-          <p className="text-gray-500 px-12 dark:text-gray-400">No floors found.</p>
+          <p className="text-gray-500 px-12 dark:text-gray-400">{t("noFloorsFound")}</p>
         ) : (
           <div className="grid gap-6 px-12 sm:grid-cols-2 lg:grid-cols-3">
             {filteredFloors.map((floor: any) => {
               const building = buildings.find((b: any) => b.id === floor.buildingId);
 
-              return(
-              <div
-                key={floor.id}
-                onClick={() =>
-                  navigate("/create-location", { state: { floor } })
-                }
-                className="bg-white relative dark:bg-gray-800 rounded-xl shadow-md p-6 flex flex-col items-center text-center hover:ring-2 hover:ring-indigo-500 hover:scale-105 transition cursor-pointer group"
-              >
-                <p className="absolute bottom-5 left-6 text-gray-500">{building.type}</p>
-                {/* Image Floor */}
-                <div className="mb-4">
-                  <img 
-                    className="object-cover text-indigo-600 text-6xl w-auto h-96" 
-                    src={floor.floorPictureUrl} 
-                    alt="Floor schema"/>
-                </div>
+              return (
+                <div
+                  key={floor.id}
+                  onClick={() =>
+                    navigate("/create-location", { state: { floor } })
+                  }
+                  className="bg-white relative dark:bg-gray-800 rounded-xl shadow-md p-6 flex flex-col items-center text-center hover:ring-2 hover:ring-indigo-500 hover:scale-105 transition cursor-pointer group"
+                >
+                  <p className="absolute bottom-5 left-6 text-gray-500">{t(building.type.toLowerCase())}</p>
+                  
+                  {/* Image Floor */}
+                  <div className="mb-4">
+                    <img 
+                      className="object-cover text-indigo-600 text-6xl w-auto h-96" 
+                      src={floor.floorPictureUrl} 
+                      alt="Floor schema"/>
+                  </div>
 
-                {/* Info */}
-                <h3 className="text-lg font-semibold mb-1">{floor.name}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Building - {building.name}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  {floor.dimensionWidth}m × {floor.dimensionHeight}m
-                </p>
+                  {/* Info */}
+                  <h3 className="text-lg font-semibold mb-1">{floor.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t("building")} - {building.name}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    {floor.dimensionWidth}m × {floor.dimensionHeight}m
+                  </p>
 
-                {/* Actions */}
-                <div className="flex gap-4 mt-auto">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate("/create-location", { state: { floor } });
-                    }}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-600 transition"
-                    title="Edit"
-                  >
-                    <FaEdit size={18} />
-                  </button>
-                  <button
-                    onClick={(e) => handleDelete(e, floor.id)}
-                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 transition"
-                    title="Delete"
-                  >
-                    <FaTrash size={18} />
-                  </button>
+                  {/* Actions */}
+                  <div className="flex gap-4 mt-auto">
+                    <button
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-600 transition"
+                      title={t("edit")}
+                    >
+                      <FaEdit size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(e, floor.id)}
+                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 transition"
+                      title={t("delete")}
+                    >
+                      <FaTrash size={18} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )})}
+              );
+            })}
           </div>
         )}
       </div>

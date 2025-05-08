@@ -2,7 +2,7 @@ import { MapContainer, TileLayer, useMap, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from "leaflet";
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaArrowLeftLong, FaLocationDot } from "react-icons/fa6";
@@ -18,18 +18,6 @@ import Cookies from 'js-cookie';
 interface ModeControlProps {
     setMapType: (type: 'standard' | 'satellite') => void;
 }
-
-const MapCenter = ({ center }: { center: [number, number] | null }) => {
-  const map = useMap();
-
-  useEffect(() => {
-    if (center) {
-      map.setView(center, 20);
-    }
-  }, [center, map]);
-
-  return null;
-};
 
 // Custom control for mode switching (Satellite/Standard)
 const ModeControl = ({ setMapType }: ModeControlProps) => {
