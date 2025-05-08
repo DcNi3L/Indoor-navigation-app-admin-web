@@ -1,10 +1,11 @@
-import { BrowserRouter as Router } from "react-router-dom";
+import {BrowserRouter as Router} from "react-router-dom";
 import AppRoutes from "./routes/AppRoutes";
-import { useEffect } from "react";
+import {useEffect} from "react";
 import Cookies from "js-cookie";
-import { scheduleTokenRefresh } from "./services/scheduleToken";
+import {scheduleTokenRefresh} from "./services/scheduleToken";
 
 export default function App() {
+  console.log(process.env.REACT_APP_SUPABASE_URL)
   useEffect(() => {
     const refreshToken = Cookies.get("refreshToken");
     if (refreshToken) {
@@ -13,9 +14,9 @@ export default function App() {
     }
   }, []);
 
-  return(
-   <Router>
-     <AppRoutes />
-   </Router>
- );
+  return (
+    <Router>
+      <AppRoutes/>
+    </Router>
+  );
 }
