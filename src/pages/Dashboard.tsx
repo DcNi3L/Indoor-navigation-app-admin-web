@@ -8,20 +8,17 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 import { FaBuilding, FaMap, FaRoute, FaQrcode } from "react-icons/fa";
-import { useBuildingsByUser, useAllFloors } from "../services/useBuildingService";
-import Cookies from "js-cookie";
+import { useAllBuildings, useAllFloors } from "../services/useBuildingService";
 import { useTranslation } from "react-i18next";
 
 export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const userId = Cookies.get('userId') || '';
-  const userEmail = Cookies.get('userEmail') || '';
 
   const { data: admins = [] } = useAllAdmins();
   const { data: result = 0 } = useFullBucketSize('profile-images');
   let size = Number((result as any / (1024 * 1024)).toFixed(2));
-  const { data: buildings = [] } = useBuildingsByUser(Number(userId));
+  const { data: buildings = [] } = useAllBuildings();
   const { data: floors = [] } = useAllFloors();
   const qrCodes = JSON.parse(localStorage.getItem("qrList") || "[]");
 
