@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAllFloors, useAllBuildings } from "../services/useBuildingService";
 import FloorEditor from "../components/layouts/FloorEditor";
 import { toast } from "react-hot-toast";
+import { t } from "i18next";
 
 export default function RoutesPage() {
   const { data: floors = [] } = useAllFloors();
@@ -12,7 +13,7 @@ export default function RoutesPage() {
 
   const handleSelectFloor = (floor: any) => {
     if (!floor.floorPictureUrl) {
-      toast.error("No image for this floor");
+      toast.error(t("noFloorImg"));
       return;
     }
 
@@ -23,7 +24,7 @@ export default function RoutesPage() {
   if (!selectedFloor) {
     return (
       <div className="p-6 mt-12">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Select a Floor</h2>
+        <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">{t("floorSel")}</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {floors.map((floor: any) => {
             const building = buildings.find((b: any) => b.id === floor.buildingId);
@@ -53,7 +54,7 @@ export default function RoutesPage() {
   return (
     <div className="mt-12 p-4 w-full space-y-8">
       <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-        Editing: {selectedFloor.name}
+        {t("routeEditing")}: {selectedFloor.name}
       </h2>
 
       {<FloorEditor imageUrl={floorImageUrl} />}

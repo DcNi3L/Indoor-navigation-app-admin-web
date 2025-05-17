@@ -84,7 +84,7 @@ export default function InteractiveImageOverlay({
 
       initializedRef.current = true;
     }
-  }, [dimensionHeight, dimensionWidth, onCenterChange, userLocation, isEditMode]);
+  }, [dimensionHeight, dimensionWidth, onCenterChange, scaleFactor, userLocation, isEditMode]);
 
   const getBounds = (): [LatLngTuple, LatLngTuple] => {
     if (!topLeft || !bottomRight) return [[0, 0], [0, 0]];
@@ -116,31 +116,86 @@ export default function InteractiveImageOverlay({
   const bottomLeft: LatLngTuple | null = topLeft && bottomRight ? [bottomRight[0], topLeft[1]] : null;
   const topRight: LatLngTuple | null = topLeft && bottomRight ? [topLeft[0], bottomRight[1]] : null;
 
+  const [previewTopLeft, setPreviewTopLeft] = useState<LatLngTuple | null>(null);
+  const [previewBottomRight, setPreviewBottomRight] = useState<LatLngTuple | null>(null);
   const handleDrag = (corner: string, newLatLng: LatLngTuple) => {
-    let newTopLeft = topLeft!;
-    let newBottomRight = bottomRight!;
+    if (!topLeft || !bottomRight) return;
+
+    // Текущие размеры
+    const currentWidth = getDistanceInMeters([topLeft[0], topLeft[1]], [topLeft[0], bottomRight[1]]);
+    const currentHeight = getDistanceInMeters([topLeft[0], topLeft[1]], [bottomRight[0], topLeft[1]]);
+    const aspectRatio = currentWidth / currentHeight;
+
+    // Инициализация новых координат предпросмотра
+    let previewTopLeft = topLeft;
+    let previewBottomRight = bottomRight;
 
     switch (corner) {
-      case 'topLeft':
-        newTopLeft = newLatLng;
-        break;
-      case 'topRight':
-        newTopLeft = [newLatLng[0], topLeft![1]];
-        newBottomRight = [bottomRight![0], newLatLng[1]];
-        break;
-      case 'bottomLeft':
-        newTopLeft = [topLeft![0], newLatLng[1]];
-        newBottomRight = [newLatLng[0], bottomRight![1]];
-        break;
-      case 'bottomRight':
-        newBottomRight = newLatLng;
-        break;
+        case 'topLeft': {
+            const newWidth = getDistanceInMeters([newLatLng[0], bottomRight[1]], bottomRight);
+            const newHeight = newWidth / aspectRatio;
+
+            const newLat = bottomRight[0] + metersToLatDelta(newHeight);
+            const newLng = bottomRight[1] - metersToLngDelta(newWidth, bottomRight[0]);
+
+            previewTopLeft = [newLatLng[0], newLatLng[1]];
+            previewBottomRight = [bottomRight[0], bottomRight[1]];
+            break;
+        }
+        case 'topRight': {
+            const newWidth = getDistanceInMeters([bottomRight[0], newLatLng[1]], bottomRight);
+            const newHeight = newWidth / aspectRatio;
+
+            const newLat = bottomRight[0] + metersToLatDelta(newHeight);
+            const newLng = topLeft[1] + metersToLngDelta(newWidth, topLeft[0]);
+
+            previewTopLeft = [topLeft[0], newLatLng[1]];
+            previewBottomRight = [newLatLng[0], bottomRight[1]];
+            break;
+        }
+        case 'bottomLeft': {
+            const newWidth = getDistanceInMeters([newLatLng[0], topLeft[1]], topLeft);
+            const newHeight = newWidth / aspectRatio;
+
+            const newLat = topLeft[0] - metersToLatDelta(newHeight);
+            const newLng = bottomRight[1] - metersToLngDelta(newWidth, bottomRight[0]);
+
+            previewTopLeft = [newLatLng[0], topLeft[1]];
+            previewBottomRight = [bottomRight[0], newLatLng[1]];
+            break;
+        }
+        case 'bottomRight': {
+            const newWidth = getDistanceInMeters(topLeft, [topLeft[0], newLatLng[1]]);
+            const newHeight = newWidth / aspectRatio;
+
+            const newLat = topLeft[0] - metersToLatDelta(newHeight);
+            const newLng = topLeft[1] + metersToLngDelta(newWidth, topLeft[0]);
+
+            previewTopLeft = [topLeft[0], topLeft[1]];
+            previewBottomRight = [newLatLng[0], newLatLng[1]];
+            break;
+        }
     }
 
-    setTopLeft(newTopLeft);
-    setBottomRight(newBottomRight);
-    onCenterChange?.(getCenter());
-    triggerDimensionChange(newTopLeft, newBottomRight);
+    // Устанавливаем предпросмотр
+    setPreviewTopLeft(previewTopLeft);
+    setPreviewBottomRight(previewBottomRight);
+  };
+
+  const applyPreview = () => {
+      if (previewTopLeft && previewBottomRight) {
+          setTopLeft(previewTopLeft);
+          setBottomRight(previewBottomRight);
+          setPreviewTopLeft(null);
+          setPreviewBottomRight(null);
+          onCenterChange?.(getCenter());
+          triggerDimensionChange(previewTopLeft, previewBottomRight);
+      }
+  };
+
+  const cancelPreview = () => {
+      setPreviewTopLeft(null);
+      setPreviewBottomRight(null);
   };
 
   const handleMoveOverlay = (newCenter: LatLngTuple) => {
@@ -158,45 +213,48 @@ export default function InteractiveImageOverlay({
     triggerDimensionChange(newTopLeft, newBottomRight);
   };
 
+
   const renderDraggableCorner = (pos: LatLngTuple, corner: string) => (
     <Marker
-      key={corner}
-      position={pos}
-      draggable={true}
-      icon={markerIcon}
-      eventHandlers={{
-        dragend: (e) => {
-          const newPos = e.target.getLatLng();
-          handleDrag(corner, [newPos.lat, newPos.lng]);
-        },
-      }}
+        key={corner}
+        position={pos}
+        draggable={true}
+        icon={markerIcon}
+        eventHandlers={{
+            drag: (e) => {
+                const newPos = e.target.getLatLng();
+                handleDrag(corner, [newPos.lat, newPos.lng]);
+            },
+            dragend: () => applyPreview(),
+            dragstart: cancelPreview,
+        }}
     />
   );
 
   if (!uploadedFile || !userLocation || !topLeft || !bottomRight) return null;
 
   const center = getCenter();
+  const currentTopLeft = previewTopLeft || topLeft;
+  const currentBottomRight = previewBottomRight || bottomRight;
 
   return (
     <>
       <ImageOverlay
         url={URL.createObjectURL(uploadedFile)}
-        bounds={getBounds()}
+        bounds={[currentTopLeft, currentBottomRight]}
         opacity={opacity ?? 0.7}
         zIndex={50}
-        eventHandlers={{
-          click: () => {
-            onOverlayClick?.();
-          },
-        }}
-      />
+    />
 
-      <Rectangle bounds={getBounds()} pathOptions={{ color: 'blue', dashArray: '5, 5', fillOpacity: 0 }} />
+    <Rectangle 
+        bounds={[currentTopLeft, currentBottomRight]} 
+        pathOptions={{dashArray: '5, 5', fillOpacity: 0.2 }} 
+    />
 
-      {topLeft && renderDraggableCorner(topLeft, 'topLeft')}
-      {topRight && renderDraggableCorner(topRight, 'topRight')}
-      {bottomLeft && renderDraggableCorner(bottomLeft, 'bottomLeft')}
-      {bottomRight && renderDraggableCorner(bottomRight, 'bottomRight')}
+    {currentTopLeft && renderDraggableCorner(currentTopLeft, 'topLeft')}
+    {topRight && renderDraggableCorner([currentTopLeft[0], currentBottomRight[1]], 'topRight')}
+    {bottomLeft && renderDraggableCorner([currentBottomRight[0], currentTopLeft[1]], 'bottomLeft')}
+    {currentBottomRight && renderDraggableCorner(currentBottomRight, 'bottomRight')}
 
       <Marker
         position={center}

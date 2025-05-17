@@ -2,9 +2,11 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { useAllFloors, useDeleteFloor, useAllBuildings } from "../services/useBuildingService";
+import { useDeleteFileByUrl } from "../services/supabaseClient";
 import clsx from "clsx";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Floors() {
   const { t } = useTranslation();
@@ -17,6 +19,8 @@ export default function Floors() {
   const { data: floors = [], isLoading } = useAllFloors();
   const { data: buildings = [] } = useAllBuildings();
   const { mutateAsync: deleteFloor } = useDeleteFloor();
+  const { mutateAsync: deleteFileByUrl } = useDeleteFileByUrl();
+  const queryClient = useQueryClient();
 
   const buildingNames = useMemo(() => {
     return buildings.map((b: any) => b.name).filter(Boolean);
@@ -41,11 +45,15 @@ export default function Floors() {
     return matchesType && matchesSearch;
   });
 
-  const handleDelete = async (e: React.MouseEvent, id: number) => {
+  const handleDelete = async (e: React.MouseEvent, id: number, picture_url: string) => {
     e.stopPropagation();
     try {
+      await deleteFileByUrl(picture_url);
       await deleteFloor(id);
       toast.success(t("floorDeleted"));
+      queryClient.invalidateQueries({
+        queryKey: ['allFloors']
+      });
     } catch (e) {
       console.error("Delete failed:", e);
       toast.error(t("floorDeleteError"));
@@ -167,7 +175,7 @@ export default function Floors() {
                       <FaEdit size={18} />
                     </button>
                     <button
-                      onClick={(e) => handleDelete(e, floor.id)}
+                      onClick={(e) => handleDelete(e, floor.id, floor.floorPictureUrl)}
                       className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 transition"
                       title={t("delete")}
                     >

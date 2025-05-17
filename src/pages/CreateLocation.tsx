@@ -14,6 +14,7 @@ import { buildingTypes } from '../utils/buildingTypes';
 import { useCreateBuilding, useCreateFloor, useFloorsByBuildingId } from "../services/useBuildingService";
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
+import { t } from 'i18next';
 
 interface ModeControlProps {
     setMapType: (type: 'standard' | 'satellite') => void;
@@ -84,7 +85,7 @@ const CenterControl = ({ setUserLocation }: { setUserLocation: (latlng: [number,
                 },
                 (error) => {
                   console.error('Error getting location:', error);
-                  alert('Unable to retrieve your location');
+                  alert(t("geolocationError"));
                 }
               );
             } else {
@@ -317,7 +318,7 @@ export default function CreateLocation() {
       setUserLocation(coords);
       setOverlayCenter(coords);
     } else {
-      alert('Address not found in any source');
+      alert(t("addressNotFound"));
     }
   };
   
@@ -326,7 +327,7 @@ export default function CreateLocation() {
     let filePath = "";
   
     if (!overlayCenter) {
-      toast.error("Please select a location on the map.");
+      toast.error(t("selectLocation"));
       return;
     }
   
@@ -341,7 +342,7 @@ export default function CreateLocation() {
   
       if (uploadError) {
         console.error("Supabase upload error:", uploadError);
-        toast.error("Failed to upload profile photo.");
+        toast.error(t("failedToUpload"));
         return;
       }
   
@@ -379,7 +380,7 @@ export default function CreateLocation() {
       }
   
       setBuildingId(newBuildingId);
-      toast.success("Building created");
+      toast.success(t("buildingCreated"));
   
       console.log('picture: ', uploadedImageUrl);
       await createFloor({
@@ -391,7 +392,7 @@ export default function CreateLocation() {
         floorPictureUrl: uploadedImageUrl,
       });
   
-      toast.success("Floor created");
+      toast.success(t("floorCreated"));
       navigate('/');
     } catch (error) {
       if (filePath) {
@@ -408,7 +409,7 @@ export default function CreateLocation() {
       }
   
       console.error("Error creating building/floor:", error);
-      toast.error("Failed to create building or floor");
+      toast.error(t("failedToCreateBuilding"));
     }
   };   
 
@@ -424,20 +425,20 @@ export default function CreateLocation() {
             >
               <FaArrowLeftLong size={28} />
             </button>
-            <h2 className="text-xl text-gray-800 dark:text-white">Create Location</h2>
+            <h2 className="text-xl text-gray-800 dark:text-white">{t("createLocation")}</h2>
           </div>
 
           {step === 1 && (
             <>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">STEP: 1 OF 2</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t("step1of2")}</p>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-                Upload a file with indoor floor plan. This plan will be used as a map during navigation.
+                {t("uploadFloorPlan")}
               </p>
               <div className="border-2 border-dashed border-blue-400 dark:border-blue-500 rounded p-6 text-center cursor-pointer hover:border-blue-600 dark:hover:border-blue-400 transition">
                 <label htmlFor="file-upload" className="cursor-pointer">
                   <p className="flex justify-center"><BiSolidImageAdd size={50} color="#60a5fa" /></p>
-                  <div className="text-blue-600 dark:text-blue-400 text-sm underline">UPLOAD FLOOR PLAN</div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Maximum size: 5 MB<br />JPG, PNG or SVG file</p>
+                  <div className="text-blue-600 dark:text-blue-400 text-sm uppercase underline">{t("uploadFloorPlanButton")}</div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{t("uploadMaxSize")}<br />{t("uploadSupportedFormats")}</p>
                 </label>
                 <input
                   id="file-upload"
@@ -458,13 +459,13 @@ export default function CreateLocation() {
 
           {step === 2 && (
             <>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">STEP: 2 OF 2</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t("step2of2")}</p>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-                Move, Scale or Rotate your floor plan to align it with the actual position on the map:
+                {t("moveScaleRotate")}
               </p>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{t("name")}</label>
                 <input
                   type="text"
                   value={name}
@@ -474,7 +475,7 @@ export default function CreateLocation() {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Floor Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{t("floorName")}</label>
                 <input
                   type="text"
                   value={floorName}
@@ -484,7 +485,7 @@ export default function CreateLocation() {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{t("description")}</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -495,17 +496,17 @@ export default function CreateLocation() {
               {/* Advanced Settings Toggle */}
               <div className="border-t dark:border-gray-700 pt-4">
                 <details className="text-sm text-gray-600 dark:text-gray-300">
-                  <summary className="cursor-pointer select-none mb-2 dark:text-gray-200 font-medium">Advanced setting</summary>
+                  <summary className="cursor-pointer select-none mb-2 dark:text-gray-200 font-medium">{t("advancedSettings")}</summary>
                   <div className="max-h-64 overflow-y-auto overflow-x-hidden pr-1 pb-1">
                     <div className="mb-4">
-                      <label className="block text-sm dark:text-gray-200 mb-1">Address:</label>
+                      <label className="block text-sm dark:text-gray-200 mb-1">{t("address")}:</label>
                       <div className="flex">
                         <input
                           type="text"
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
                           className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l"
-                          placeholder="Search by address..."
+                          placeholder={t("searchBy")}
                         />
                         <button
                           onClick={handleAddressSearch}
@@ -518,7 +519,7 @@ export default function CreateLocation() {
 
                     {/* Coordinates */}
                     <div className="mb-2">
-                      <label className="block text-sm dark:text-gray-200 mb-1">Latitude:</label>
+                      <label className="block text-sm dark:text-gray-200 mb-1">{t("latitude")}:</label>
                       <input
                         type="text"
                         value={overlayCenter ? overlayCenter[0].toFixed(8) : ''}
@@ -527,7 +528,7 @@ export default function CreateLocation() {
                     </div>
 
                     <div className="mb-2">
-                      <label className="block text-sm dark:text-gray-200 mb-1">Longitude:</label>
+                      <label className="block text-sm dark:text-gray-200 mb-1">{t("longitude")}:</label>
                       <input
                         type="text"
                         value={overlayCenter ? overlayCenter[1].toFixed(8) : ''}
@@ -538,7 +539,7 @@ export default function CreateLocation() {
                     {/* Dimensions */}
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm dark:text-gray-200 mb-1">Floor width (m):</label>
+                        <label className="block text-sm dark:text-gray-200 mb-1">{t("floorWidth")}:</label>
                         <input
                           type="number"
                           value={dimensionWidth}
@@ -547,7 +548,7 @@ export default function CreateLocation() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm dark:text-gray-200 mb-1">Floor height (m):</label>
+                        <label className="block text-sm dark:text-gray-200 mb-1">{t("floorHeight")}:</label>
                         <input
                           type="number"
                           value={dimensionHeight}
@@ -559,7 +560,7 @@ export default function CreateLocation() {
                     
                     {/* Building type radio */}
                     <div className="mb-4">
-                      <label className="block text-sm font-medium mb-2 dark:text-gray-200">Type:</label>
+                      <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t("buildingType")}:</label>
                       <div className="flex justify-around">
                         {buildingTypes.map((type) => (
                           <label key={type.value} className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
@@ -580,7 +581,7 @@ export default function CreateLocation() {
                     {/* Opacity range */}
                     <div className="mb-2">
                       <label className="block text-sm mb-1 text-gray-600 dark:text-gray-200">
-                        Plan opacity <span className="text-blue-900 dark:text-blue-400 font-semibold">{Math.round(opacity * 100)}%</span>
+                        {t("opacity")} <span className="text-blue-900 dark:text-blue-400 font-semibold">{Math.round(opacity * 100)}%</span>
                       </label>
                       <input
                         type="range"
@@ -607,7 +608,7 @@ export default function CreateLocation() {
               className="mt-6 w-80 py-1.5 px-14 text-sm border-2 outline-none border-blue-400 font-bold
               text-blue-400 hover:border-red-400 hover:text-red-400 dark:text-blue-300 dark:hover:text-red-400 transition duration-200 rounded"
             >
-              Cancel
+              {t("cancel")}
             </button>
           </div>
         )}
@@ -619,14 +620,14 @@ export default function CreateLocation() {
               className="py-2 px-8 text-sm border-2 outline-none border-blue-400 rounded text-nowrap
               text-blue-400 hover:border-orange-400 hover:text-orange-400 dark:text-blue-300 dark:hover:text-orange-400 transition duration-200"
             >
-              Change Image
+              {t("changeImage")}
             </button>
             <button
               onClick={handleSave}
               className="py-2 px-16 text-sm border-2 outline-none border-blue-400 rounded
               text-blue-400 hover:border-green-400 hover:text-green-400 dark:text-blue-300 dark:hover:text-green-400 transition duration-200"
             >
-              Save
+              {t("savE")}
             </button>
           </div>
         )}
@@ -678,7 +679,7 @@ export default function CreateLocation() {
           <ModeControl setMapType={setMapType} />
           {userLocation && (
             <Marker position={userLocation} icon={customIcon}>
-              <Popup>You are here!</Popup>
+              <Popup>{t("youAreHere")}</Popup>
             </Marker>
           )}
         </MapContainer>

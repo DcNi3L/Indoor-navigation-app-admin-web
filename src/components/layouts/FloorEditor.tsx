@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import POIIcon from "../ui/POIIcon";
+import { FaPlus, FaMinus } from "react-icons/fa";
+import { t } from "i18next";
 
 type POI = { x: number; y: number; type: string };
 type Edge = { from: number; to: number };
@@ -22,6 +24,8 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
   const [drawnEdges, setDrawnEdges] = useState<Edge[]>([]);
   const [mode, setMode] = useState<"poi" | "connect" | "draw" | "erase" | "wall">("poi");
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [scale, setScale] = useState(1);
+
 
   useEffect(() => {
     const img = new Image();
@@ -32,6 +36,14 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
       }
     };
   }, [imageUrl]);
+
+  const handleZoomIn = () => {
+    setScale((prev) => Math.min(prev + 0.2, 3));
+  };
+
+  const handleZoomOut = () => {
+      setScale((prev) => Math.max(prev - 0.2, 0.5));
+  };
 
   const getRelativePos = (e: React.MouseEvent | MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -46,48 +58,59 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
     if (!pos) return;
 
     if (mode === "poi") {
-      setPois([...pois, { ...pos, type: selectedType }]);
+        setPois([...pois, { ...pos, type: selectedType }]);
     }
 
     if (mode === "draw") {
-      setDrawingPath((prev) => [...prev, pos]);
-    }    
+        setDrawingPath((prev) => [...prev, pos]);
+    }
 
     if (mode === "erase") {
-      let erased = false;
-    
-      setEdges((prev) => prev.filter((edge) => {
-        const from = pois[edge.from];
-        const to = pois[edge.to];
-        const isNear = isPointNearLine(pos, from, to, 0.015); // более чувствительно
-        if (isNear) erased = true;
-        return !isNear;
-      }));
-    
-      setWalls((prev) => prev.filter((wall) => {
-        const isNear = isPointNearLine(pos, wall.from, wall.to, 0.015);
-        if (isNear) erased = true;
-        return !isNear;
-      }));
-    
-      // Можно опционально: очищать точку из path
-      setDrawingPath((prev) =>
-        prev.filter(p => Math.abs(p.x - pos.x) > 0.01 || Math.abs(p.y - pos.y) > 0.01)
-      );
-    
-      if (!erased) {
-        console.log("Nothing was near click to erase.");
-      }
-    }    
+        let erased = false;
+
+        // Стирание обычных краев (edges)
+        setEdges((prev) => prev.filter((edge) => {
+            const from = pois[edge.from];
+            const to = pois[edge.to];
+            const isNear = isPointNearLine(pos, from, to, 0.015);
+            if (isNear) erased = true;
+            return !isNear;
+        }));
+
+        // Стирание стен (walls)
+        setWalls((prev) => prev.filter((wall) => {
+            const isNear = isPointNearLine(pos, wall.from, wall.to, 0.015);
+            if (isNear) erased = true;
+            return !isNear;
+        }));
+
+        // Стирание нарисованных линий (drawnEdges)
+        setDrawnEdges((prev) => prev.filter((edge) => {
+            const from = allPOIs[edge.from];
+            const to = allPOIs[edge.to];
+            const isNear = isPointNearLine(pos, from, to, 0.015);
+            if (isNear) erased = true;
+            return !isNear;
+        }));
+
+        // Стирание точек из path (опционально)
+        setDrawingPath((prev) =>
+            prev.filter(p => Math.abs(p.x - pos.x) > 0.01 || Math.abs(p.y - pos.y) > 0.01)
+        );
+
+        if (!erased) {
+            console.log("Nothing was near click to erase.");
+        }
+    }
 
     if (mode === "wall") {
-      setCurrentWallPath(prev => {
-        const newPath = [...prev, pos];
-        if (newPath.length >= 2) {
-          setWalls(prevWalls => [...prevWalls, { from: newPath[newPath.length - 2], to: newPath[newPath.length - 1] }]);
-        }
-        return newPath;
-      });
+        setCurrentWallPath(prev => {
+            const newPath = [...prev, pos];
+            if (newPath.length >= 2) {
+                setWalls(prevWalls => [...prevWalls, { from: newPath[newPath.length - 2], to: newPath[newPath.length - 1] }]);
+            }
+            return newPath;
+        });
     }
   };
 
@@ -167,6 +190,127 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
     }
   };
 
+  const handleDragEdge = (e: React.MouseEvent, edgeIndex: number) => {
+    e.preventDefault();
+    const onMove = (moveEvent: MouseEvent) => {
+        const pos = getRelativePos(moveEvent);
+        if (!pos) return;
+        setEdges((prev) => {
+            const updated = [...prev];
+            const edge = updated[edgeIndex];
+            const from = pois[edge.from];
+            const to = pois[edge.to];
+
+            // Перемещаем оба конца линии
+            pois[edge.from] = { ...from, ...pos };
+            pois[edge.to] = { ...to, ...pos };
+            return updated;
+        });
+    };
+    const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  const handleDragWall = (e: React.MouseEvent, wallIndex: number) => {
+      e.preventDefault();
+      const onMove = (moveEvent: MouseEvent) => {
+          const pos = getRelativePos(moveEvent);
+          if (!pos) return;
+          setWalls((prev) => {
+              const updated = [...prev];
+              const wall = updated[wallIndex];
+
+              wall.from = { ...wall.from, ...pos };
+              wall.to = { ...wall.to, ...pos };
+
+              return updated;
+          });
+      };
+      const onUp = () => {
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+  };
+
+  const handleDragDrawnEdge = (e: React.MouseEvent, edgeIndex: number) => {
+      e.preventDefault();
+      const onMove = (moveEvent: MouseEvent) => {
+          const pos = getRelativePos(moveEvent);
+          if (!pos) return;
+          setDrawnEdges((prev) => {
+              const updated = [...prev];
+              const edge = updated[edgeIndex];
+              const from = allPOIs[edge.from];
+              const to = allPOIs[edge.to];
+
+              allPOIs[edge.from] = { ...from, ...pos };
+              allPOIs[edge.to] = { ...to, ...pos };
+
+              return updated;
+          });
+      };
+      const onUp = () => {
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+  };
+
+  // Функция для начала перетаскивания узлов (POIs, стен, линий)
+  const startDrag = (type: "poi" | "wall" | "edge", index: number, edgePoint: "from" | "to" = "from") => (e: React.MouseEvent) => {
+      e.preventDefault();
+
+      const onMove = (moveEvent: MouseEvent) => {
+          const pos = getRelativePos(moveEvent);
+          if (!pos) return;
+
+          if (type === "poi") {
+              setPois((prev) => {
+                  const updated = [...prev];
+                  updated[index] = { ...updated[index], ...pos };
+                  return updated;
+              });
+          }
+
+          if (type === "wall") {
+              setWalls((prev) => {
+                  const updated = [...prev];
+                  const wall = updated[index];
+                  wall[edgePoint] = pos;
+                  return updated;
+              });
+          }
+
+          if (type === "edge") {
+              setEdges((prev) => {
+                  const updated = [...prev];
+                  const edge = updated[index];
+                  if (edgePoint === "from") {
+                      pois[edge.from] = { ...pois[edge.from], ...pos };
+                  } else {
+                      pois[edge.to] = { ...pois[edge.to], ...pos };
+                  }
+                  return updated;
+              });
+          }
+      };
+
+      const onUp = () => {
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+  };
+
   const allPOIs = [...pois, ...drawnPOIs];
 
   return (
@@ -174,7 +318,7 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
       {/* Sidebar */}
       <div className="w-64 h-max bg-white sticky top-20 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-xl flex flex-col gap-5 text-sm">
         <div>
-          <h3 className="text-base font-semibold text-gray-800 dark:text-white mb-2">Selected POI</h3>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-white mb-2">{t("selected")}</h3>
           <div className="grid grid-cols-3 gap-2">
             {TYPES.map((type) => (
               <button
@@ -194,7 +338,7 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
         </div>
 
         <div>
-          <h3 className="text-base font-semibold text-gray-800 dark:text-white mb-2">Editor Mode</h3>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-white mb-2">{t("mode")}</h3>
           <div className="space-y-1">
             {(["poi", "connect", "draw", "erase", "wall"] as const).map((m) => (
               <button
@@ -256,7 +400,7 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
             }}
             className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
           >
-            Export JSON
+            {t("export")}
           </button>
 
           <button
@@ -271,92 +415,230 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
             }}
             className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
           >
-            Clear All
+            {t("clearAll")}
           </button>
         </div>
       </div>
 
       {/* Canvas */}
       <div
-        ref={containerRef}
-        onClick={handleCanvasClick}
-        onMouseMove={(e) => {
-          const pos = getRelativePos(e);
-          if (pos) setMousePos(pos);
-        }}
-        onMouseLeave={() => setMousePos(null)}        
-        className="relative border -translate-y-14 border-gray-300 dark:border-gray-600 rounded-lg w-full max-w-8xl bg-cover bg-center"
-        style={{
-          backgroundImage: `url(${imageUrl})`,
-          aspectRatio: imageRatio,
-          cursor: "crosshair",
-        }}
+          ref={containerRef}
+          onClick={handleCanvasClick}
+          onMouseMove={(e) => {
+              const pos = getRelativePos(e);
+              if (pos) setMousePos(pos);
+          }}
+          onMouseLeave={() => setMousePos(null)}
+          className="relative border -translate-y-14 border-gray-300 dark:border-gray-600 rounded-lg w-full max-w-8xl bg-cover bg-center"
+          style={{
+              backgroundImage: `url(${imageUrl})`,
+              aspectRatio: imageRatio,
+              cursor: mode === "draw" ? "crosshair" : "default",
+              transform: `scale(${scale})`,
+              transformOrigin: "center center",
+              transition: "transform 0.2s ease-out",
+          }}
       >
         {/* Edges */}
+        {/* Edges, Walls и Drawn Edges с поддержкой растягивания */}
         <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+          {/* Edges с внутренними стрелками */}
           {edges.map((edge, i) => {
             const from = pois[edge.from];
             const to = pois[edge.to];
             return (
-              <line
-                key={i}
-                x1={`${from.x * 100}%`}
-                y1={`${from.y * 100}%`}
-                x2={`${to.x * 100}%`}
-                y2={`${to.y * 100}%`}
-                stroke="blue"
-                strokeWidth={2}
-              />
+              <>
+                <line
+                  key={`edge-${i}`}
+                  x1={`${from.x * 100}%`}
+                  y1={`${from.y * 100}%`}
+                  x2={`${to.x * 100}%`}
+                  y2={`${to.y * 100}%`}
+                  stroke="blue"
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  markerMid="url(#arrow-blue)" 
+                  style={{
+                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
+                  }}
+                />
+                {/* Маркеры для перетаскивания */}
+                <circle
+                  cx={`${from.x * 100}%`}
+                  cy={`${from.y * 100}%`}
+                  r="8"
+                  fill="blue"
+                  className="cursor-move"
+                  onMouseDown={startDrag("edge", i, "from")}
+                />
+                <circle
+                  cx={`${to.x * 100}%`}
+                  cy={`${to.y * 100}%`}
+                  r="8"
+                  fill="blue"
+                  className="cursor-move"
+                  onMouseDown={startDrag("edge", i, "to")}
+                />
+              </>
             );
           })}
 
+          {/* Walls - толстые и без стрелок */}
           {walls.map((seg, i) => (
-            <line
-              key={`wall-${i}`}
-              x1={`${seg.from.x * 100}%`}
-              y1={`${seg.from.y * 100}%`}
-              x2={`${seg.to.x * 100}%`}
-              y2={`${seg.to.y * 100}%`}
-              stroke="red"
-              strokeWidth={3}
-              strokeDasharray="4"
-            />
+            <>
+              <line
+                key={`wall-${i}`}
+                x1={`${seg.from.x * 100}%`}
+                y1={`${seg.from.y * 100}%`}
+                x2={`${seg.to.x * 100}%`}
+                y2={`${seg.to.y * 100}%`}
+                stroke="red"
+                strokeWidth={8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="12 6"
+                style={{
+                  filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.3))",
+                }}
+              />
+              {/* Маркеры для перетаскивания */}
+              <circle
+                cx={`${seg.from.x * 100}%`}
+                cy={`${seg.from.y * 100}%`}
+                r="10"
+                fill="red"
+                className="cursor-move"
+                onMouseDown={startDrag("wall", i, "from")}
+              />
+              <circle
+                cx={`${seg.to.x * 100}%`}
+                cy={`${seg.to.y * 100}%`}
+                r="10"
+                fill="red"
+                className="cursor-move"
+                onMouseDown={startDrag("wall", i, "to")}
+              />
+            </>
           ))}
 
+          {/* Drawn Edges */}
           {drawnEdges.map((edge, i) => {
             const from = allPOIs[edge.from];
             const to = allPOIs[edge.to];
             if (!from || !to) return null;
             return (
-              <line
-                key={`drawn-${i}`}
-                x1={`${from.x * 100}%`}
-                y1={`${from.y * 100}%`}
-                x2={`${to.x * 100}%`}
-                y2={`${to.y * 100}%`}
-                stroke="orange"
-                strokeWidth={2}
-              />
+              <>
+                <line
+                  key={`drawn-${i}`}
+                  x1={`${from.x * 100}%`}
+                  y1={`${from.y * 100}%`}
+                  x2={`${to.x * 100}%`}
+                  y2={`${to.y * 100}%`}
+                  stroke="orange"
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray="8 4"
+                  markerMid="url(#arrow-orange)"
+                  style={{
+                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
+                  }}
+                />
+                {/* Маркеры для перетаскивания */}
+                <circle
+                  cx={`${from.x * 100}%`}
+                  cy={`${from.y * 100}%`}
+                  r="8"
+                  fill="orange"
+                  className="cursor-move"
+                  onMouseDown={startDrag("edge", i, "from")}
+                />
+                <circle
+                  cx={`${to.x * 100}%`}
+                  cy={`${to.y * 100}%`}
+                  r="8"
+                  fill="orange"
+                  className="cursor-move"
+                  onMouseDown={startDrag("edge", i, "to")}
+                />
+              </>
             );
           })}
 
-          {mode === "draw" && drawingPath.length > 1 &&
-            drawingPath.map((pt, i) => {
-              const next = drawingPath[i + 1];
-              if (!next) return null;
-              return (
+          {/* Draw Mode Preview */}
+          {mode === "draw" && drawingPath.length > 1 && (
+            <>
+              {drawingPath.map((pt, i) => {
+                const next = drawingPath[i + 1];
+                if (!next) return null;
+                return (
+                  <line
+                    key={`preview-${i}`}
+                    x1={`${pt.x * 100}%`}
+                    y1={`${pt.y * 100}%`}
+                    x2={`${next.x * 100}%`}
+                    y2={`${next.y * 100}%`}
+                    stroke="orange"
+                    strokeWidth={4}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray="8 4"
+                    markerMid="url(#arrow-orange)"
+                    style={{
+                      filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
+                    }}
+                  />
+                );
+              })}
+
+              {/* Последняя линия с текущей позицией мыши */}
+              {mousePos && (
                 <line
-                  key={`preview-${i}`}
-                  x1={`${pt.x * 100}%`}
-                  y1={`${pt.y * 100}%`}
-                  x2={`${next.x * 100}%`}
-                  y2={`${next.y * 100}%`}
+                  x1={`${drawingPath[drawingPath.length - 1].x * 100}%`}
+                  y1={`${drawingPath[drawingPath.length - 1].y * 100}%`}
+                  x2={`${mousePos.x * 100}%`}
+                  y2={`${mousePos.y * 100}%`}
                   stroke="orange"
-                  strokeWidth={2}
-                  strokeDasharray="4"
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray="8 4"
+                  markerMid="url(#arrow-orange)"
+                  style={{
+                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
+                  }}
                 />
-              );
-            })}
+              )}
+            </>
+          )}
+
+          {/* Определения стрелок */}
+          <defs>
+            <marker
+              id="arrow-blue"
+              markerWidth="10"
+              markerHeight="10"
+              refX="5"
+              refY="3"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d="M0,0 L6,3 L0,6 Z" fill="blue" />
+            </marker>
+
+            <marker
+              id="arrow-orange"
+              markerWidth="10"
+              markerHeight="10"
+              refX="5"
+              refY="3"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d="M0,0 L6,3 L0,6 Z" fill="orange" />
+            </marker>
+          </defs>
         </svg>
 
         {mousePos && (
@@ -369,17 +651,17 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
               zIndex: 50,
             }}
           >
-            {mode === "draw" && "✏️ Draw"}
-            {mode === "connect" && "🔗 Connect"}
-            {mode === "erase" && "🧹 Erase"}
-            {mode === "wall" && "🚧 Wall"}
-            {mode === "poi" && "➕ POI"}
+            {mode === "draw" && "✏️"}
+            {mode === "connect" && "🔗"}
+            {mode === "erase" && "🧹"}
+            {mode === "wall" && "🚧"}
+            {mode === "poi" && "➕"}
           </div>
         )}
 
         {/* POIs */}
         {pois.map((poi, idx) => {
-          if (poi.type === "path") return null; // ⛔️ пропустить "временные" точки
+          if (poi.type === "path") return null;
           return (
             <div
               key={idx}
@@ -402,6 +684,23 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
           );
         })}
       </div>
+      {/* Zoom Controls */}
+        <div className="fixed right-2 top-1/2 transform -translate-y-1/2 z-50 flex flex-col gap-3">
+            <button
+                onClick={handleZoomIn}
+                className="bg-orange-600 text-white p-2 rounded-lg shadow-lg hover:bg-orange-500 transition"
+                title="Zoom In"
+            >
+                <FaPlus />
+            </button>
+            <button
+                onClick={handleZoomOut}
+                className="bg-orange-600 text-white p-2 rounded-lg shadow-lg hover:bg-orange-500 transition"
+                title="Zoom Out"
+            >
+                <FaMinus />
+            </button>
+        </div>
     </div>
   );
 }

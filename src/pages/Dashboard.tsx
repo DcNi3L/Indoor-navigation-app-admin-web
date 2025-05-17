@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import ActionCard from "../components/ui/ActionCard";
 import AdminCards from "../components/ui/AdminCard";
-import { useFullBucketSize } from "../services/supabaseClient";
+import { useDeleteAllFilesInFolder, useFullBucketSize } from "../services/supabaseClient";
 import { useAllAdmins } from "../services/authApiService";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -10,6 +10,7 @@ import {
 import { FaBuilding, FaMap, FaRoute, FaQrcode } from "react-icons/fa";
 import { useAllBuildings, useAllFloors } from "../services/useBuildingService";
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -21,6 +22,20 @@ export default function Dashboard() {
   const { data: buildings = [] } = useAllBuildings();
   const { data: floors = [] } = useAllFloors();
   const qrCodes = JSON.parse(localStorage.getItem("qrList") || "[]");
+  const deleteAllFilesMutation = useDeleteAllFilesInFolder();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleClearStorage = () => {
+    if (window.confirm(t("confirmClearStorage"))) {
+      setIsDeleting(true);
+      deleteAllFilesMutation.mutate(
+        { bucketName: 'profile-images', path: '' },
+        {
+          onSettled: () => setIsDeleting(false),
+        }
+      );
+    }
+  };
 
   const storageData = [
     { name: t("used"), value: size },
@@ -49,7 +64,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Buildings/Floors/Routes/QR */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white tracking-wide mb-4">
+          <h2 className="text-xl text-center font-bold text-gray-800 dark:text-white tracking-wide mb-4">
             {t("systemEntities")}
           </h2>
           <ResponsiveContainer width="100%" height={300}>
@@ -72,11 +87,13 @@ export default function Dashboard() {
         </div>
 
         {/* Хранилище */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 flex flex-col items-center">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white tracking-wide mb-4">
             {t("storageUsage")}
           </h2>
-          <ResponsiveContainer width="100%" height={300}>
+
+          {/* Pie Chart */}
+          <ResponsiveContainer width="100%" height={250} className="mb-4">
             <PieChart>
               <Pie
                 data={storageData}
@@ -96,9 +113,26 @@ export default function Dashboard() {
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
-          <div className="text-center mt-4 text-sm text-gray-600 dark:text-gray-400">
+
+          {/* Storage Info */}
+          <div className="text-center mb-4 text-sm text-gray-600 dark:text-gray-400">
             {t("used")} <span className="text-red-500">{size}MB</span> {t("of")} <span className="text-green-500">50MB</span>
           </div>
+
+          {/* Clear Storage Button */}
+          <button
+            onClick={handleClearStorage}
+            disabled={isDeleting || deleteAllFilesMutation.status === 'pending'}
+            className={`px-6 py-2 rounded-full font-semibold text-white transition-all ${
+              isDeleting || deleteAllFilesMutation.status === 'pending'
+                ? 'bg-gray-500 cursor-not-allowed'
+                : 'bg-red-500 hover:bg-red-600 shadow-md'
+            }`}
+          >
+            {isDeleting || deleteAllFilesMutation.status === 'pending'
+              ? t("clearingStorage")
+              : t("clearStorage")}
+          </button>
         </div>
       </div>
 

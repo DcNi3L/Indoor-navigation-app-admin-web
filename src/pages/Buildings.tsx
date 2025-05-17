@@ -12,6 +12,7 @@ import { FaShop } from "react-icons/fa6";
 import { useAllBuildings, useDeleteBuilding } from "../services/useBuildingService";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 
 const typeIconMap: Record<string, JSX.Element> = {
   HOUSE: <FaHome className="text-indigo-600 text-6xl w-60 h-60" />,
@@ -29,6 +30,7 @@ export default function Buildings() {
   const { t } = useTranslation();
 
   const { data: buildings = [], isLoading } = useAllBuildings()
+  const queryClient = useQueryClient();
 
   const buildingNames = useMemo(() => {
       return buildings.map((b: any) => b.name).filter(Boolean);
@@ -57,6 +59,9 @@ export default function Buildings() {
     try {
       await deleteBuilding(id);
       toast.success(t("buildingDeleted"));
+      queryClient.invalidateQueries({
+        queryKey: ['allBuildings']
+      });
     } catch (e) {
       console.error("Delete failed:", e);
       toast.error(t("buildingDeleteError"));
