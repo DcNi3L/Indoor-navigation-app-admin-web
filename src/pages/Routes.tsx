@@ -10,6 +10,8 @@ export default function RoutesPage() {
 
   const [selectedFloor, setSelectedFloor] = useState<any>(null);
   const [floorImageUrl, setFloorImageUrl] = useState<string>("");
+  const [floorWidth, setFloorWidth] = useState<number>(0);
+  const [floorHeight, setFloorHeight] = useState<number>(0);
 
   const handleSelectFloor = (floor: any) => {
     if (!floor.floorPictureUrl) {
@@ -19,6 +21,8 @@ export default function RoutesPage() {
 
     setSelectedFloor(floor);
     setFloorImageUrl(floor.floorPictureUrl);
+    setFloorWidth(floor.dimensionWidth);
+    setFloorHeight(floor.dimensionHeight);
   };
 
   if (!selectedFloor) {
@@ -57,7 +61,7 @@ export default function RoutesPage() {
         {t("routeEditing")}: {selectedFloor.name}
       </h2>
 
-      {<FloorEditor imageUrl={floorImageUrl} />}
+      {<FloorEditor imageUrl={floorImageUrl} width={floorWidth} height={floorHeight} />}
     </div>
   );
 }

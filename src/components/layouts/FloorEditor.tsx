@@ -3,14 +3,30 @@ import POIIcon from "../ui/POIIcon";
 import { FaPlus, FaMinus } from "react-icons/fa";
 import { t } from "i18next";
 
-type POI = { x: number; y: number; type: string };
-type Edge = { from: number; to: number };
+// Типы данных
+type POI = {
+  id: string;
+  x: number;
+  y: number;
+  type: string;
+};
+
+type Edge = {
+  from: string;
+  to: string;
+  start: { x: number; y: number };
+  end: { x: number; y: number };
+};
+
 type PathPoint = { x: number; y: number };
 type WallSegment = { from: PathPoint; to: PathPoint };
 
+// Генерация уникальных идентификаторов
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
 const TYPES = ["toilet", "kitchen", "bedroom", "children", "bathroom"];
 
-export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
+export default function FloorEditor({ imageUrl, width, height }: { imageUrl: string, width: number, height: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [pois, setPois] = useState<POI[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -58,7 +74,19 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
     if (!pos) return;
 
     if (mode === "poi") {
-        setPois([...pois, { ...pos, type: selectedType }]);
+      const newPOI: POI = { 
+        id: generateId(), 
+        x: pos.x, 
+        y: pos.y, 
+        type: selectedType.toUpperCase() 
+      };
+      setPois(prev => [...prev, newPOI]);
+    }
+
+    if (mode === "connect" && pois.length >= 2) {
+      const lastPOI = pois[pois.length - 1];
+      const newEdge: Edge = { from: lastPOI.id, to: generateId(), start: lastPOI, end: pos };
+      setEdges((prev: Edge[]) => [...prev, newEdge]);
     }
 
     if (mode === "draw") {
@@ -69,7 +97,7 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
         let erased = false;
 
         // Стирание обычных краев (edges)
-        setEdges((prev) => prev.filter((edge) => {
+        setEdges((prev:any) => prev.filter((edge:any) => {
             const from = pois[edge.from];
             const to = pois[edge.to];
             const isNear = isPointNearLine(pos, from, to, 0.015);
@@ -85,7 +113,8 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
         }));
 
         // Стирание нарисованных линий (drawnEdges)
-        setDrawnEdges((prev) => prev.filter((edge) => {
+        setDrawnEdges((prev) => prev.filter((edge:any) => {
+            const allPOIs = [...pois, ...drawnPOIs];
             const from = allPOIs[edge.from];
             const to = allPOIs[edge.to];
             const isNear = isPointNearLine(pos, from, to, 0.015);
@@ -136,7 +165,7 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
       if (connectingFrom === null) {
         setConnectingFrom(idx);
       } else if (connectingFrom !== idx) {
-        setEdges((prev) => [...prev, { from: connectingFrom, to: idx }]);
+        setEdges((prev:any) => [...prev, { from: connectingFrom, to: idx }]);
         setConnectingFrom(null);
       } else {
         setConnectingFrom(null);
@@ -145,7 +174,7 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
     if (e.altKey || e.type === "contextmenu") {
       e.preventDefault();
       setPois((prev) => prev.filter((_, i) => i !== idx));
-      setEdges((prev) => prev.filter((e) => e.from !== idx && e.to !== idx));
+      setEdges((prev:any) => prev.filter((e:any) => e.from !== idx && e.to !== idx));
     }
   };
 
@@ -167,100 +196,33 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
     window.addEventListener("mouseup", onUp);
   };
 
+  // Функция для завершения рисования пути
   const handleDrawFinish = () => {
     if (mode === "draw" && drawingPath.length > 1) {
       const newEdges: Edge[] = [];
       const newPois: POI[] = [];
-  
-      for (let i = 0; i < drawingPath.length - 1; i++) {
-        const from = drawingPath[i];
-        const to = drawingPath[i + 1];
-  
-        newPois.push({ ...from, type: "path" }, { ...to, type: "path" });
-  
-        const fromIdx = pois.length + drawnPOIs.length + i * 2;
-        const toIdx = pois.length + drawnPOIs.length + i * 2 + 1;
-  
-        newEdges.push({ from: fromIdx, to: toIdx });
+
+      // Создаем узлы для всех точек пути
+      const pathPOIs = drawingPath.map(point => ({
+        id: generateId(),
+        ...point,
+        type: "ROUTE"
+      }));
+
+      // Создаем ребра между последовательными точками
+      for (let i = 0; i < pathPOIs.length - 1; i++) {
+        newEdges.push({
+          from: pathPOIs[i].id,
+          to: pathPOIs[i+1].id,
+          start: { x: pathPOIs[i].x, y: pathPOIs[i].y },
+          end: { x: pathPOIs[i+1].x, y: pathPOIs[i+1].y }
+        });
       }
-  
-      setDrawnPOIs(prev => [...prev, ...newPois]);
+
+      setDrawnPOIs(prev => [...prev, ...pathPOIs]);
       setDrawnEdges(prev => [...prev, ...newEdges]);
       setDrawingPath([]);
     }
-  };
-
-  const handleDragEdge = (e: React.MouseEvent, edgeIndex: number) => {
-    e.preventDefault();
-    const onMove = (moveEvent: MouseEvent) => {
-        const pos = getRelativePos(moveEvent);
-        if (!pos) return;
-        setEdges((prev) => {
-            const updated = [...prev];
-            const edge = updated[edgeIndex];
-            const from = pois[edge.from];
-            const to = pois[edge.to];
-
-            // Перемещаем оба конца линии
-            pois[edge.from] = { ...from, ...pos };
-            pois[edge.to] = { ...to, ...pos };
-            return updated;
-        });
-    };
-    const onUp = () => {
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  };
-
-  const handleDragWall = (e: React.MouseEvent, wallIndex: number) => {
-      e.preventDefault();
-      const onMove = (moveEvent: MouseEvent) => {
-          const pos = getRelativePos(moveEvent);
-          if (!pos) return;
-          setWalls((prev) => {
-              const updated = [...prev];
-              const wall = updated[wallIndex];
-
-              wall.from = { ...wall.from, ...pos };
-              wall.to = { ...wall.to, ...pos };
-
-              return updated;
-          });
-      };
-      const onUp = () => {
-          window.removeEventListener("mousemove", onMove);
-          window.removeEventListener("mouseup", onUp);
-      };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
-  };
-
-  const handleDragDrawnEdge = (e: React.MouseEvent, edgeIndex: number) => {
-      e.preventDefault();
-      const onMove = (moveEvent: MouseEvent) => {
-          const pos = getRelativePos(moveEvent);
-          if (!pos) return;
-          setDrawnEdges((prev) => {
-              const updated = [...prev];
-              const edge = updated[edgeIndex];
-              const from = allPOIs[edge.from];
-              const to = allPOIs[edge.to];
-
-              allPOIs[edge.from] = { ...from, ...pos };
-              allPOIs[edge.to] = { ...to, ...pos };
-
-              return updated;
-          });
-      };
-      const onUp = () => {
-          window.removeEventListener("mousemove", onMove);
-          window.removeEventListener("mouseup", onUp);
-      };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
   };
 
   // Функция для начала перетаскивания узлов (POIs, стен, линий)
@@ -289,7 +251,7 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
           }
 
           if (type === "edge") {
-              setEdges((prev) => {
+              setEdges((prev:any) => {
                   const updated = [...prev];
                   const edge = updated[index];
                   if (edgePoint === "from") {
@@ -311,7 +273,75 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
       window.addEventListener("mouseup", onUp);
   };
 
-  const allPOIs = [...pois, ...drawnPOIs];
+  // Example usage when saving the data
+  const handleExport = () => {
+    // Combine all POIs (both manually placed and drawn)
+    const allPOIs = [...pois, ...drawnPOIs];
+    
+    // Combine all edges (both manually connected and drawn)
+    const allEdges = [...edges, ...drawnEdges];
+
+    // Format nodes according to the API specification
+    const nodeLookup = allPOIs.reduce((acc:any, node) => {
+    acc[node.id] = node;
+    return acc;
+  }, {});
+
+  const nodes = allPOIs.map(poi => {
+    const connections = allEdges
+      .filter(edge => edge.from === poi.id || edge.to === poi.id)
+      .map(edge => {
+        const connectedId = edge.from === poi.id ? edge.to : edge.from;
+        const connectedNode = nodeLookup[connectedId];
+        return {
+          id: connectedId,
+          // Дополнительная информация о ребре (опционально)
+          distance: Math.sqrt(
+            Math.pow((poi.x - connectedNode.x) * width, 2) +
+            Math.pow((poi.y - connectedNode.y) * height, 2)
+          )
+        };
+      });
+
+    return {
+      id: poi.id,
+      x: poi.x * width,
+      y: poi.y * height,
+      connections, // Теперь содержит ID + расстояние
+      type: poi.type === "ROUTE" ? "ROUTE_NODE" : "POI_NODE"
+    };
+  });
+
+    // Format walls for pathfinding obstacles
+    const formattedWalls = walls.map(wall => ({
+      from: {
+        x: wall.from.x * width, // Convert to meters
+        y: wall.from.y * height // Convert to meters
+      },
+      to: {
+        x: wall.to.x * width, // Convert to meters
+        y: wall.to.y * height // Convert to meters
+      }
+    }));
+
+    // Create the final data structure
+    const exportData = {
+      nodes,
+      walls: formattedWalls,
+      floorDimensions: {
+        width,
+        height
+      }
+    };
+
+    // Export the data
+    const data = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "floor-navigation-data.json";
+    link.click();
+  };
 
   return (
     <div className="flex gap-4">
@@ -385,19 +415,7 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
 
         <div className="space-y-2 pt-4">
           <button
-            onClick={() => {
-              const json = JSON.stringify({
-                pois: allPOIs,
-                edges: [...edges, ...drawnEdges],
-                path: drawingPath,
-                walls
-              }, null, 2);
-              const blob = new Blob([json], { type: "application/json" });
-              const link = document.createElement("a");
-              link.href = URL.createObjectURL(blob);
-              link.download = "floor-data.json";
-              link.click();
-            }}
+            onClick={() => handleExport()}
             className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
           >
             {t("export")}
@@ -443,13 +461,16 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
         {/* Edges, Walls и Drawn Edges с поддержкой растягивания */}
         <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
           {/* Edges с внутренними стрелками */}
-          {edges.map((edge, i) => {
-            const from = pois[edge.from];
-            const to = pois[edge.to];
+          {edges.map((edge:any, i) => {
+            const allPOIs = [...pois, ...drawnPOIs]; // Объединяем все узлы
+            const from = allPOIs.find(p => p.id === edge.from); // Ищем по ID
+            const to = allPOIs.find(p => p.id === edge.to);
+            
+            if (!from || !to) return null;
             return (
               <>
                 <line
-                  key={`edge-${i}`}
+                  key={`edge-${edge.from}-${edge.to}-${i}`}
                   x1={`${from.x * 100}%`}
                   y1={`${from.y * 100}%`}
                   x2={`${to.x * 100}%`}
@@ -523,14 +544,16 @@ export default function FloorEditor({ imageUrl }: { imageUrl: string }) {
           ))}
 
           {/* Drawn Edges */}
-          {drawnEdges.map((edge, i) => {
-            const from = allPOIs[edge.from];
-            const to = allPOIs[edge.to];
+          {drawnEdges.map((edge:any, i) => {
+            const allPOIs = [...pois, ...drawnPOIs];
+            const from = allPOIs.find(p => p.id === edge.from);
+            const to = allPOIs.find(p => p.id === edge.to);
+            
             if (!from || !to) return null;
             return (
               <>
                 <line
-                  key={`drawn-${i}`}
+                  key={`drawn-${edge.from}-${edge.to}-${i}`}
                   x1={`${from.x * 100}%`}
                   y1={`${from.y * 100}%`}
                   x2={`${to.x * 100}%`}
