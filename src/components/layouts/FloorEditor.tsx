@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import { toast } from "react-hot-toast";
+import axios from "axios";
 import POIIcon from "../ui/POIIcon";
 import { FaPlus, FaMinus } from "react-icons/fa";
 import { t } from "i18next";
+import Cookies from "js-cookie";
 
 // Типы данных
 type POI = {
@@ -26,7 +29,7 @@ const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9
 
 const TYPES = ["toilet", "kitchen", "bedroom", "children", "bathroom"];
 
-export default function FloorEditor({ imageUrl, width, height }: { imageUrl: string, width: number, height: number }) {
+export default function FloorEditor({ imageUrl, width, height, floorId }: { imageUrl: string, width: number, height: number, floorId: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [pois, setPois] = useState<POI[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -78,7 +81,7 @@ export default function FloorEditor({ imageUrl, width, height }: { imageUrl: str
         id: generateId(), 
         x: pos.x, 
         y: pos.y, 
-        type: selectedType.toUpperCase() 
+        type: selectedType.toUpperCase()
       };
       setPois(prev => [...prev, newPOI]);
     }
@@ -94,42 +97,43 @@ export default function FloorEditor({ imageUrl, width, height }: { imageUrl: str
     }
 
     if (mode === "erase") {
-        let erased = false;
+      let erased = false;
 
-        // Стирание обычных краев (edges)
-        setEdges((prev:any) => prev.filter((edge:any) => {
-            const from = pois[edge.from];
-            const to = pois[edge.to];
-            const isNear = isPointNearLine(pos, from, to, 0.015);
-            if (isNear) erased = true;
-            return !isNear;
-        }));
+      setEdges((prev) =>
+        prev.filter((edge) => {
+          const from = pois.find(p => p.id === edge.from);
+          const to = pois.find(p => p.id === edge.to);
+          const isNear = from && to && isPointNearLine(pos, from, to, 0.015);
+          if (isNear) erased = true;
+          return !isNear;
+        })
+      );
 
-        // Стирание стен (walls)
-        setWalls((prev) => prev.filter((wall) => {
-            const isNear = isPointNearLine(pos, wall.from, wall.to, 0.015);
-            if (isNear) erased = true;
-            return !isNear;
-        }));
+      setWalls((prev) =>
+        prev.filter((wall) => {
+          const isNear = isPointNearLine(pos, wall.from, wall.to, 0.015);
+          if (isNear) erased = true;
+          return !isNear;
+        })
+      );
 
-        // Стирание нарисованных линий (drawnEdges)
-        setDrawnEdges((prev) => prev.filter((edge:any) => {
-            const allPOIs = [...pois, ...drawnPOIs];
-            const from = allPOIs[edge.from];
-            const to = allPOIs[edge.to];
-            const isNear = isPointNearLine(pos, from, to, 0.015);
-            if (isNear) erased = true;
-            return !isNear;
-        }));
+      setDrawnEdges((prev) =>
+        prev.filter((edge) => {
+          const from = [...pois, ...drawnPOIs].find(p => p.id === edge.from);
+          const to = [...pois, ...drawnPOIs].find(p => p.id === edge.to);
+          const isNear = from && to && isPointNearLine(pos, from, to, 0.015);
+          if (isNear) erased = true;
+          return !isNear;
+        })
+      );
 
-        // Стирание точек из path (опционально)
-        setDrawingPath((prev) =>
-            prev.filter(p => Math.abs(p.x - pos.x) > 0.01 || Math.abs(p.y - pos.y) > 0.01)
-        );
+      setDrawingPath((prev) =>
+        prev.filter(p => Math.abs(p.x - pos.x) > 0.01 || Math.abs(p.y - pos.y) > 0.01)
+      );
 
-        if (!erased) {
-            console.log("Nothing was near click to erase.");
-        }
+      if (!erased) {
+        console.log("Nothing was near click to erase.");
+      }
     }
 
     if (mode === "wall") {
@@ -200,7 +204,6 @@ export default function FloorEditor({ imageUrl, width, height }: { imageUrl: str
   const handleDrawFinish = () => {
     if (mode === "draw" && drawingPath.length > 1) {
       const newEdges: Edge[] = [];
-      const newPois: POI[] = [];
 
       // Создаем узлы для всех точек пути
       const pathPOIs = drawingPath.map(point => ({
@@ -273,74 +276,104 @@ export default function FloorEditor({ imageUrl, width, height }: { imageUrl: str
       window.addEventListener("mouseup", onUp);
   };
 
-  // Example usage when saving the data
-  const handleExport = () => {
-    // Combine all POIs (both manually placed and drawn)
+  const handleExport = async () => {
     const allPOIs = [...pois, ...drawnPOIs];
-    
-    // Combine all edges (both manually connected and drawn)
     const allEdges = [...edges, ...drawnEdges];
+    const backendIdMap: Record<string, string> = {};
+    const createdNodeIds: string[] = [];
 
-    // Format nodes according to the API specification
-    const nodeLookup = allPOIs.reduce((acc:any, node) => {
-    acc[node.id] = node;
-    return acc;
-  }, {});
+    try {
+      toast.success("Сохранение узлов...");
 
-  const nodes = allPOIs.map(poi => {
-    const connections = allEdges
-      .filter(edge => edge.from === poi.id || edge.to === poi.id)
-      .map(edge => {
-        const connectedId = edge.from === poi.id ? edge.to : edge.from;
-        const connectedNode = nodeLookup[connectedId];
-        return {
-          id: connectedId,
-          // Дополнительная информация о ребре (опционально)
-          distance: Math.sqrt(
-            Math.pow((poi.x - connectedNode.x) * width, 2) +
-            Math.pow((poi.y - connectedNode.y) * height, 2)
-          )
-        };
-      });
+      for (const poi of allPOIs) {
+        const res = await axios.post(`${process.env.REACT_APP_INDOOR_URL}/floors/${floorId}/node`, {
+          pos: {
+            x: poi.x * width,
+            y: poi.y * height,
+          },
+          type: poi.type === "ROUTE" ? "ROUTE_NODE" : "POI",
+          nodes: [],
+        }, {
+          headers: {Authorization: `Bearer ${Cookies.get('accessToken')}`},
+        }
+      );
 
-    return {
-      id: poi.id,
-      x: poi.x * width,
-      y: poi.y * height,
-      connections, // Теперь содержит ID + расстояние
-      type: poi.type === "ROUTE" ? "ROUTE_NODE" : "POI_NODE"
-    };
-  });
-
-    // Format walls for pathfinding obstacles
-    const formattedWalls = walls.map(wall => ({
-      from: {
-        x: wall.from.x * width, // Convert to meters
-        y: wall.from.y * height // Convert to meters
-      },
-      to: {
-        x: wall.to.x * width, // Convert to meters
-        y: wall.to.y * height // Convert to meters
+        const newId = res.data.id;
+        backendIdMap[poi.id] = newId;
+        createdNodeIds.push(newId);
       }
-    }));
 
-    // Create the final data structure
-    const exportData = {
-      nodes,
-      walls: formattedWalls,
-      floorDimensions: {
-        width,
-        height
+      toast.success("Создание связей между узлами...");
+
+      for (const edge of allEdges) {
+        const from = backendIdMap[edge.from];
+        const to = backendIdMap[edge.to];
+
+        if (from && to) {
+          await axios.post(`${process.env.REACT_APP_INDOOR_URL}/floors/${floorId}/nodes/bi-connection`, null, {
+            params: { node1: from, node2: to },
+            headers: {Authorization: `Bearer ${Cookies.get('accessToken')}`},
+          });
+        }
       }
-    };
 
-    // Export the data
-    const data = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([data], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "floor-navigation-data.json";
-    link.click();
+      toast.success("Все узлы и связи успешно сохранены.");
+
+      const exportData = {
+        nodes: Object.entries(backendIdMap)
+          .map(([localId, backendId]) => {
+            const poi = allPOIs.find(p => p.id === localId);
+            if (!poi) return null; // безопасный пропуск
+            return {
+              id: backendId,
+              type: poi.type === "ROUTE" ? "ROUTE_NODE" : "POI",
+              x: poi.x * width,
+              y: poi.y * height,
+            };
+          })
+          .filter(Boolean), // удаляем null
+        walls: walls.map(wall => ({
+          from: {
+            x: wall.from.x * width,
+            y: wall.from.y * height,
+          },
+          to: {
+            x: wall.to.x * width,
+            y: wall.to.y * height,
+          }
+        })),
+        floorDimensions: {
+          width,
+          height
+        }
+      };
+
+      const data = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([data], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "floor-navigation-data.json";
+      link.click();
+      window.location.href = '/routes'
+
+    } catch (error) {
+      console.error("Ошибка при экспорте схемы:", error);
+      toast.error("Ошибка! Выполняется откат...");
+
+      await Promise.all(
+        createdNodeIds.map(async (id) => {
+          try {
+            await axios.delete(`${process.env.REACT_APP_INDOOR_URL}/floors/${floorId}/node/${id}`, {
+              headers: {Authorization: `Bearer ${Cookies.get('accessToken')}`},
+            });
+          } catch (err) {
+            console.warn("Ошибка при удалении узла", id, err);
+          }
+        })
+      );
+
+      toast.error("Откат выполнен. Данные не сохранены.");
+    }
   };
 
   return (

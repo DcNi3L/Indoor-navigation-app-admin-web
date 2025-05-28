@@ -134,6 +134,8 @@
     "selected": "Selected POI",
     "mode": "Mode",
     "export": "Export",
-    "clearAll": "Clear All"
+    "clearAll": "Clear All",
+    "deleteSelected": "Delete selected",
+    "exporT": "Export"
 }
   

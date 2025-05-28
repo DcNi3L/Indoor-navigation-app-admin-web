@@ -10,7 +10,9 @@ import {
 import { FaBuilding, FaMap, FaRoute, FaQrcode } from "react-icons/fa";
 import { useAllBuildings, useAllFloors } from "../services/useBuildingService";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import Cookies from "js-cookie";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -24,6 +26,55 @@ export default function Dashboard() {
   const qrCodes = JSON.parse(localStorage.getItem("qrList") || "[]");
   const deleteAllFilesMutation = useDeleteAllFilesInFolder();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [routeCounts, setRouteCounts] = useState<{ floorId: number; routeCount: number }[]>([]);
+
+  useEffect(() => {
+    async function getRoutesPerFloor() {
+      try {
+        const floorsRes = await axios.get(`${process.env.REACT_APP_INDOOR_URL}/floors`, {
+          headers: {
+            Authorization: `Bearer ${Cookies.get("accessToken")}`
+          }
+        });
+
+        const floors = floorsRes.data || [];
+
+        const results = await Promise.all(
+          floors.map(async (floor: any) => {
+            try {
+              const nodesRes = await axios.get(
+                `${process.env.REACT_APP_INDOOR_URL}/floors/${floor.id}/nodes`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${Cookies.get("accessToken")}`
+                  }
+                }
+              );
+
+              const nodes = nodesRes.data || [];
+              const routeNodeCount = nodes.filter((n: any) => n.type === "ROUTE_NODE").length;
+
+              return {
+                floorId: floor.id,
+                routeCount: routeNodeCount
+              };
+            } catch {
+              return {
+                floorId: floor.id,
+                routeCount: 0
+              };
+            }
+          })
+        );
+
+        setRouteCounts(results);
+      } catch (err) {
+        console.error("Ошибка при получении этажей:", err);
+      }
+    }
+
+    getRoutesPerFloor();
+  }, []);
 
   const handleClearStorage = () => {
     if (window.confirm(t("confirmClearStorage"))) {
@@ -37,17 +88,20 @@ export default function Dashboard() {
     }
   };
 
+  const freeValue = 50 - size;
+
   const storageData = [
     { name: t("used"), value: size },
-    { name: t("free"), value: 50 - size },
+    { name: t("free"), value: Math.floor(freeValue * 100) / 100 },
   ];
 
   const colors = ['#FF0000', '#00FF00'];
 
+  const totalRoutes = routeCounts.reduce((sum, r) => sum + r.routeCount, 0);
   const buildingsData = [
     { name: t("buildings"), [t("value")]: buildings.length, to: "buildings" },
     { name: t("floors"), [t("value")]: floors.length, to: "floors" },
-    { name: t("routes"), [t("value")]: 14, to: "routes" },
+    { name: t("routes"), [t("value")]: totalRoutes, to: "routes" },
     { name: t("qrPoints"), [t("value")]: qrCodes.length, to: "qr" },
   ];
 

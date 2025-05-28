@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
+import { robotoBase64 } from "../assets/fonts/roboto_base64";
 import jsPDF from "jspdf";
 import JSZip from "jszip";
 import { saveAs } from "file-saver"
 import { useTranslation } from "react-i18next";
 import ReactDOM from "react-dom/client";
+import { FaTrash } from "react-icons/fa";
+import { PiExportFill } from "react-icons/pi";
+import { BiSolidFilePng } from "react-icons/bi";
+import { FaFilePdf } from "react-icons/fa6";
 
 
 interface QRItem {
@@ -17,6 +22,8 @@ export default function QRPoints() {
   const { t } = useTranslation();
   const [label, setLabel] = useState("");
   const [qrList, setQrList] = useState<QRItem[]>([]);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedQrs, setSelectedQrs] = useState<string[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("qrList");
@@ -85,6 +92,9 @@ export default function QRPoints() {
       unit: "mm",
       format: "a4",
     });
+
+    pdf.addFileToVFS("Roboto-Regular.ttf", robotoBase64);
+    pdf.addFont("Roboto-Regular.ttf", "Roboto", "normal");
   
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
@@ -93,7 +103,7 @@ export default function QRPoints() {
     // 🔹 Верхний заголовок
     pdf.setTextColor("#333333");
     pdf.setFontSize(20);
-    pdf.setFont("helvetica", "bold");
+    pdf.setFont("Roboto");
     const title = t("qrCodeTitle");
     const titleWidth = pdf.getTextWidth(title);
     pdf.text(title, (pageWidth - titleWidth) / 2, 25);
@@ -147,6 +157,9 @@ export default function QRPoints() {
         unit: "mm",
         format: "a4",
       });
+
+      pdf.addFileToVFS("Roboto-Regular.ttf", robotoBase64);
+      pdf.addFont("Roboto-Regular.ttf", "Roboto", "normal");
   
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
@@ -155,7 +168,7 @@ export default function QRPoints() {
       // Заголовок
       pdf.setTextColor("#333333");
       pdf.setFontSize(20);
-      pdf.setFont("helvetica", "bold");
+      pdf.setFont("Roboto");
       const title = t("qrCodeTitle");
       const titleWidth = pdf.getTextWidth(title);
       pdf.text(title, (pageWidth - titleWidth) / 2, 25);
@@ -184,7 +197,7 @@ export default function QRPoints() {
   
     const content = await zip.generateAsync({ type: "blob" });
     saveAs(content, t("exportFileName"));
-  };      
+  };   
 
   return (
     <div className="p-6 mt-10 text-gray-900 dark:text-white max-w-4xl mx-auto">
@@ -218,13 +231,25 @@ export default function QRPoints() {
                   key={i}
                   className="p-4 rounded-lg bg-gray-100 dark:bg-gray-900 text-center shadow"
                 >
-                  <div className="flex justify-center">
+                  <div className="flex justify-center relative">
+                    {selectMode && (
+                      <input
+                        type="checkbox"
+                        checked={selectedQrs.includes(qr.value)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setSelectedQrs((prev) =>
+                            checked ? [...prev, qr.value] : prev.filter((v) => v !== qr.value)
+                          );
+                        }}
+                        className="absolute top-1.5 left-1.5 w-4 h-4"
+                      />
+                    )}
                     <QRCodeCanvas
                       id={`qr-${qr.value}`}
                       value={qr.value}
                       size={210}
                       level="H"
-
                       includeMargin
                     />
                   </div>
@@ -241,15 +266,15 @@ export default function QRPoints() {
                         link.download = `${qr.label}.png`;
                         link.click();
                       }}
-                      className="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+                      className="flex itemx-center gap-2 text-sm border border-green-600 hover:bg-green-700 hover:text-white text-green-600 px-3 py-2 rounded"
                     >
-                      {t("downloadPNG")}
+                      {t("exporT")} <BiSolidFilePng size={22} />
                     </button>
                     <button
                       onClick={() => downloadPDF(qr)}
-                      className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+                      className="flex itemx-center gap-2 text-sm border border-blue-600 hover:bg-blue-700 hover:text-white text-blue-600 px-3 py-2 rounded"
                     >
-                      {t("downloadPDF")}
+                      {t("exporT")} <FaFilePdf size={20} />
                     </button>
                   </div>
                 </div>
@@ -257,14 +282,53 @@ export default function QRPoints() {
             </div>
           </div>
         )}
-        {(qrList.length > 1) && (
-          <div className="mt-6 flex justify-center">
-            <button
-              onClick={exportAllAsZip}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded shadow"
-            >
-              📁 {t("exportAll")}
-            </button>
+        {qrList.length > 0 && (
+          <div className="mt-6 flex justify-center items-center gap-3">
+            {!selectMode ? (
+              <button
+                onClick={() => {
+                  setSelectMode(true);
+                  setSelectedQrs([]);
+                }}
+                className="border border-red-600 flex items-center gap-2 hover:bg-red-700 hover:text-white text-red-600 px-5 py-2 rounded shadow"
+              >
+                <FaTrash /> {t("delete")}
+              </button>
+            ) : (
+              <div className="flex flex-wrap justify-center gap-4">
+                <button
+                  onClick={() => {
+                    setSelectMode(false);
+                    setSelectedQrs([]);
+                  }}
+                  className="border border-gray-400 hover:bg-gray-500 hover:text-white text-gray-400 px-5 py-2 rounded shadow"
+                >
+                  {t("cancel")}
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedQrs.length === 0) return;
+                    const updated = qrList.filter((qr) => !selectedQrs.includes(qr.value));
+                    setQrList(updated);
+                    setSelectMode(false);
+                    setSelectedQrs([]);
+                    localStorage.setItem("qrList", JSON.stringify(updated));
+                  }}
+                  className="border border-red-600 hover:bg-red-700 hover:text-white text-red-600 px-5 py-2 rounded shadow"
+                >
+                  {t("deleteSelected")}
+                </button>
+              </div>
+            )}
+
+            {qrList.length > 1 && !selectMode && (
+              <button
+                onClick={exportAllAsZip}
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded shadow"
+              >
+                <PiExportFill size={20} /> {t("exportAll")}
+              </button>
+            )}
           </div>
         )}
       </div>

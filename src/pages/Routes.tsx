@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAllFloors, useAllBuildings } from "../services/useBuildingService";
 import FloorEditor from "../components/layouts/FloorEditor";
+import { FaArrowLeftLong } from "react-icons/fa6";
 import { toast } from "react-hot-toast";
 import { t } from "i18next";
 
@@ -12,6 +13,7 @@ export default function RoutesPage() {
   const [floorImageUrl, setFloorImageUrl] = useState<string>("");
   const [floorWidth, setFloorWidth] = useState<number>(0);
   const [floorHeight, setFloorHeight] = useState<number>(0);
+  const [floorId, setFloorId] = useState<number>(0);
 
   const handleSelectFloor = (floor: any) => {
     if (!floor.floorPictureUrl) {
@@ -23,6 +25,7 @@ export default function RoutesPage() {
     setFloorImageUrl(floor.floorPictureUrl);
     setFloorWidth(floor.dimensionWidth);
     setFloorHeight(floor.dimensionHeight);
+    setFloorId(floor.id);
   };
 
   if (!selectedFloor) {
@@ -36,7 +39,7 @@ export default function RoutesPage() {
               <div
                 key={floor.id}
                 onClick={() => handleSelectFloor(floor)}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition"
+                className="bg-white dark:bg-gray-800 rounded-xl hover:scale-105 shadow-md p-4 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition"
               >
                 <img
                   src={floor.floorPictureUrl}
@@ -57,11 +60,18 @@ export default function RoutesPage() {
 
   return (
     <div className="mt-12 p-4 w-full space-y-8">
-      <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-        {t("routeEditing")}: {selectedFloor.name}
-      </h2>
+      <div className="flex items-center gap-4">
+        <button 
+          className="text-white bg-gray-800 dark:text-gray-800 shadow hover:shadow-gray-800 dark:hover:shadow-white hover:scale-105 cursor-pointer rounded-full p-2 dark:bg-white"
+          onClick={() => setSelectedFloor(null)}>
+          <FaArrowLeftLong size={20}/>
+        </button>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {t("routeEditing")}: {selectedFloor.name}
+        </h2>
+      </div>
 
-      {<FloorEditor imageUrl={floorImageUrl} width={floorWidth} height={floorHeight} />}
+      {<FloorEditor imageUrl={floorImageUrl} width={floorWidth} height={floorHeight} floorId={floorId} />}
     </div>
   );
 }

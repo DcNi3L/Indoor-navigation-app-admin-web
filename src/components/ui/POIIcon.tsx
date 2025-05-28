@@ -10,6 +10,6 @@ const icons: Record<string, IconType> = {
 };
 
 export default function POIIcon({ type, size = 20 }: { type: string; size?: number }) {
-  const Icon = icons[type] || FaBed;
+  const Icon = icons[type.toLowerCase()] || FaBed;
   return <Icon size={size} />;
 }
