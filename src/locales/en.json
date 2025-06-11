@@ -138,6 +138,55 @@
     "deleteSelected": "Delete selected",
     "exporT": "Export",
 
-    "routesByFloor": "Routes by floor"
+    "routesByFloor": "Routes by floor",
+
+    "selectBuilding": "Select Building",
+  "selectFloor": "Select Floor",
+  "selectPOI": "Select POI",
+  "backToBuildings": "← Back to Buildings",
+  "backToFloors": "← Back to Floors",
+  "backToPOIs": "← Back to POIs",
+  "noPOIsFound": "No POIs found on this floor.",
+  "loadingPOIs": "Loading POIs...",
+  "errorLoadingPOIs": "Error loading POIs",
+  "createQRForPOI": "Create QR Code for POI",
+  "poiInformation": "POI Information",
+  "nodeId": "Node ID",
+  "position": "Position",
+  "connections": "Connections",
+  "connectedNodes": "Connected Nodes",
+  "noConnections": "No connections",
+
+  "nodeTypes": {
+    "ROUTE_NODE": "Route Point",
+    "POI": "Point of Interest",
+    "ENTRANCE": "Entrance",
+    "EXIT": "Exit",
+    "ELEVATOR": "Elevator",
+    "STAIRS": "Stairs",
+    "RESTROOM": "Restroom",
+    "INFO": "Information",
+    "RESTAURANT": "Restaurant",
+    "SHOP": "Shop",
+    "PARKING": "Parking",
+    "EMERGENCY": "Emergency"
+  },
+
+  "qrCodeFor": "QR Code for",
+  "navigationQR": "Navigation QR Code",
+  "qrContainsNavigation": "This QR code contains navigation information for indoor positioning.",
+  "scanToNavigate": "Scan this code to navigate to the selected location.",
+  "generatedQRCodes": "Generated QR Codes",
+  "qrCodeGenerated": "QR code generated successfully",
+  "errorGeneratingQR": "Error generating QR code",
+  "searchPOIs": "Search POIs...",
+  "filterByType": "Filter by type",
+  "allTypes": "All Types",
+  "coordinates": "Coordinates",
+  "floorLevel": "Floor Level",
+  "buildingInfo": "Building Information",
+  "qrCodeData": "QR Code Data",
+  "navigationData": "Navigation Data",
+  "locationDetails": "Location Details"
 }
   

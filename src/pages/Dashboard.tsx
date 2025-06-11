@@ -3,7 +3,7 @@
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useState, useMemo } from "react"
-import { FaBuilding, FaMap, FaRoute, FaQrcode, FaChartBar, FaDatabase } from "react-icons/fa"
+import { FaBuilding, FaMap, FaRoute, FaQrcode } from "react-icons/fa"
 
 import ActionCard from "../components/ui/ActionCard"
 import AdminCards from "../components/ui/AdminCard"

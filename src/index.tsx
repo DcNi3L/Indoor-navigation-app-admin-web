@@ -37,7 +37,7 @@ root.render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Toaster position="bottom-right" reverseOrder={false} />
-        <GlobalLoading />
+        {/* <GlobalLoading /> */}
         <div className='h-screen overflow-y-scroll scrollbar-hidden'>
           <App />
         </div>
