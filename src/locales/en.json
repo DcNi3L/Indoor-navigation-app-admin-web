@@ -156,6 +156,13 @@
   "connections": "Connections",
   "connectedNodes": "Connected Nodes",
   "noConnections": "No connections",
+  "selectExistingBuilding": "Select existing building",
+  "searchBuildings": "Search buildings",
+  "createNewBuilding": "Create a new building",
+  "selectBuildingToAddFloor": "Select building to add a floor",
+  "createNewBuildingDescription": "Select the building you want to add",
+  "startNewBuilding": "Add",
+  "searchBuildingsByNameOrAddress": "Enter the name or address of the building",
 
   "nodeTypes": {
     "ROUTE_NODE": "Route Point",
