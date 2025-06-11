@@ -50,6 +50,7 @@ import { IoRestaurant } from "react-icons/io5";
 import { GiBrickWall } from "react-icons/gi";
 import { t } from "i18next"
 import Cookies from "js-cookie"
+import { useNodesByFloor, Node} from '../../services/useBuildingService'
 
 // Типы данных
 type POI = {
@@ -165,6 +166,8 @@ export default function FloorEditor({
   const [history, setHistory] = useState<any[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
 
+  const { data: nodes, isLoading, error } = useNodesByFloor(floorId);
+
   const currentPOITypes = POI_TYPES[buildingType as keyof typeof POI_TYPES] || POI_TYPES.default
 
   // Helper function to get all nodes (POIs + route nodes)
@@ -172,6 +175,23 @@ export default function FloorEditor({
 
   // Helper function to find node by ID
   const findNodeById = (id: string): POI | undefined => getAllNodes().find(node => node.id === id)
+
+  useEffect(() => {
+    if (nodes) {
+      const _pois = nodes.map((node) => ({
+        id: node.id,
+        x: node.pos.x / width,
+        y: node.pos.y / height,
+        type: node.type,
+        name: node.name,
+        description: `${node.name} at (${Math.round(node.pos.x * width)}, ${Math.round(node.pos.y * height)})`,
+      }))
+      setPois(_pois);
+
+      const generatedEdges = generateEdgesFromNodes(nodes);
+      setEdges(generatedEdges);
+    }
+  }, [nodes, floorId, width, height]);
 
   useEffect(() => {
     const img = new Image()
@@ -196,6 +216,27 @@ export default function FloorEditor({
       setConnectingFrom(null)
     }
   }, [mode])
+
+  const generateEdgesFromNodes = (nodes: Node[]) => {
+    const newEdges: Edge[] = [];
+
+    // Simple logic to connect nodes sequentially
+    for (let i = 0; i < nodes.length; i++) {
+      const fromNode = nodes[i];
+
+      for (let j = 0; j < nodes[i].nodes.length; j++) {
+        const toNodeId = nodes[i].nodes[j];
+        // Here, we create an edge between every pair of nodes.
+        // You can adjust this logic based on your actual requirement, e.g., distance-based, type-based, etc.
+        newEdges.push({
+          id: generateId(), // Use the generateId function you already have
+          from: fromNode.id,
+          to: toNodeId,
+        });
+      }
+    }
+    return newEdges;
+  };
 
   const saveToHistory = () => {
     const state = {
@@ -397,7 +438,7 @@ export default function FloorEditor({
         )
 
         if (connectionExists) {
-          // toast.warning("Connection already exists!", { duration: 1500 })
+          toast.loading("Connection already exists!", { duration: 1500 })
         } else {
           const newEdge: Edge = {
             id: generateId(),
@@ -506,8 +547,8 @@ export default function FloorEditor({
           `${process.env.REACT_APP_INDOOR_URL}/floors/${floorId}/node`,
           {
             pos: {
-              x: Math.round(node.x * width),
-              y: Math.round(node.y * height),
+              x: node.x * width,
+              y: node.y * height,
             },
             type: node.type === "ROUTE_NODE" ? "ROUTE_NODE" : "POI",
             name: node.name,
@@ -526,6 +567,7 @@ export default function FloorEditor({
 
       toast.loading("Creating connections...", { id: "export" })
 
+      console.log("Edges", edges)
       // Create all connections
       for (const edge of edges) {
         const fromBackendId = backendIdMap[edge.from]
@@ -1096,7 +1138,6 @@ export default function FloorEditor({
               const poiType = currentPOITypes.find((type) => type.id === poi.type.toLowerCase())
               const isSelected = connectingFrom === poi.id
               const isConnectable = mode === "connect"
-
               return (
                 <div
                   key={poi.id}
