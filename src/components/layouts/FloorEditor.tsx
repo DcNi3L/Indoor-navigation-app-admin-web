@@ -473,7 +473,7 @@ export default function FloorEditor({
               x: Math.round(poi.x * width),
               y: Math.round(poi.y * height),
             },
-            type: poi.type === "ROUTE_NODE" ? "ROUTE_NODE" : "POI_NODE",
+            type: poi.type === "ROUTE_NODE" ? "ROUTE_NODE" : "POI",
             name: poi.name,
             description: poi.description,
             nodes: [],
@@ -511,7 +511,7 @@ export default function FloorEditor({
             if (!poi) return null
             return {
               id: backendId,
-              type: poi.type === "ROUTE_NODE" ? "ROUTE_NODE" : "POI_NODE",
+              type: poi.type === "ROUTE_NODE" ? "ROUTE_NODE" : "POI",
               x: Math.round(poi.x * width),
               y: Math.round(poi.y * height),
               name: poi.name,

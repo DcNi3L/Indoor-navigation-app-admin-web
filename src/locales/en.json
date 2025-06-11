@@ -136,6 +136,8 @@
     "export": "Export",
     "clearAll": "Clear All",
     "deleteSelected": "Delete selected",
-    "exporT": "Export"
+    "exporT": "Export",
+
+    "routesByFloor": "Routes by floor"
 }
   
