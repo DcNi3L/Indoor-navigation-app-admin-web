@@ -109,14 +109,14 @@ const updateUserProfile = async (
     pictureUrl?: string
   },
 ) => {
-  const response = await api.put(`/api/users/${email}`, data, {
+  const response = await api.put(`/user/${email}`, data, {
     headers: { "Content-Type": "application/json" },
   })
   return response.data
 }
 
 const deleteUserProfile = async (email: string) => {
-  const response = await api.delete(`/api/users/${email}`)
+  const response = await api.delete(`/user/${email}`)
   return response.data
 }
 

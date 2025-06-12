@@ -72,8 +72,6 @@ const getBuildingTypeIcon = (type: string) => {
 // Node type icon mapping
 const getNodeTypeIcon = (type: string) => {
   switch (type?.toUpperCase()) {
-    case "ROUTE_NODE":
-      return "🔗"
     case "POI":
       return "📍"
     case "ENTRANCE":
@@ -104,8 +102,6 @@ const getNodeTypeIcon = (type: string) => {
 // Get node type display name
 const getNodeTypeDisplayName = (type: string) => {
   switch (type?.toUpperCase()) {
-    case "ROUTE_NODE":
-      return "Route Point"
     case "POI":
       return "Point of Interest"
     case "ENTRANCE":
@@ -139,9 +135,10 @@ export default function QRPoints() {
   const [qrList, setQrList] = useState<QRItem[]>([])
   const [selectMode, setSelectMode] = useState(false)
   const [selectedQrs, setSelectedQrs] = useState<string[]>([])
+  const [searchExpanded, setSearchExpanded] = useState(false)
 
   // Navigation state
-  const [navigationStep, setNavigationStep] = useState<"buildings" | "floors" | "nodes" | "qr">("buildings")
+  const [navigationStep, setNavigationStep] = useState<"buildings" | "floors" | "nodes" | "qr">("qr")
   const [selectedBuildingId, setSelectedBuildingId] = useState<number | null>(null)
   const [selectedFloorId, setSelectedFloorId] = useState<number | null>(null)
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
@@ -192,13 +189,15 @@ export default function QRPoints() {
   })
 
   // Filter nodes based on search query
-  const filteredNodes = nodes.filter((node: Node) => {
-    if (!searchQuery.trim()) return true
-    return (
-      node.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      node.id.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })
+  const filteredNodes = nodes
+    .filter((node: Node) => node.type.toUpperCase() !== "ROUTE_NODE")
+    .filter((node: Node) => {
+      if (!searchQuery.trim()) return true
+      return (
+        node.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        node.id.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    })
 
   const handleGenerate = () => {
     if (!label.trim()) return
@@ -490,18 +489,30 @@ export default function QRPoints() {
   const renderBuildingsSelection = () => {
     return (
       <div className="space-y-4">
-        <div className="relative mb-4">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FaSearch className="text-gray-400" />
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t("searchBuildings")}
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium">{t("selectBuilding")}</h2>
+          <button
+            onClick={() => setSearchExpanded(!searchExpanded)}
+            className="text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            {searchExpanded ? t("hideSearch") : t("showSearch")}
+          </button>
         </div>
+
+        {searchExpanded && (
+          <div className="relative mb-4">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FaSearch className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t("searchBuildings")}
+              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+        )}
 
         {isLoadingBuildings ? (
           <div className="flex justify-center py-8">
@@ -606,18 +617,48 @@ export default function QRPoints() {
           </p>
         </div>
 
-        <div className="relative mb-4">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FaSearch className="text-gray-400" />
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t("searchNodes")}
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium">{t("selectNode")}</h2>
+          <button
+            onClick={() => setSearchExpanded(!searchExpanded)}
+            className="text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            {searchExpanded ? t("hideSearch") : t("showSearch")}
+          </button>
         </div>
+
+        {showQRGenerator ? null : (
+          <div className="flex items-center gap-4">
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={t("qrPlaceholder")}
+              className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"
+            />
+            <button
+              onClick={handleGenerate}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow"
+            >
+              {t("generate")}
+            </button>
+          </div>
+        )}
+
+        {searchExpanded && (
+          <div className="relative mb-4">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FaSearch className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t("searchNodes")}
+              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+        )}
 
         {isLoadingNodes ? (
           <div className="flex justify-center py-8">
@@ -734,12 +775,30 @@ export default function QRPoints() {
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t("generatedQRCodes")}</h3>
           <button
-            onClick={() => setShowQRGenerator(true)}
+            onClick={() => setNavigationStep("buildings")}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow flex items-center gap-2"
           >
-            <FaQrcode /> {t("createNewQR")}
+            <FaBuilding /> {t("selectBuilding")}
           </button>
         </div>
+
+        {showQRGenerator ? null : (
+          <div className="flex items-center gap-4">
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={t("qrPlaceholder")}
+              className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"
+            />
+            <button
+              onClick={handleGenerate}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow"
+            >
+              {t("generate")}
+            </button>
+          </div>
+        )}
 
         {qrList.length === 0 ? (
           <div className="text-center py-8">
