@@ -1,59 +1,75 @@
 import axios from "axios"
 import Cookies from "js-cookie"
-import { refreshTokenNow, shouldRefreshToken } from "./scheduleToken"
+import { toast } from "react-hot-toast"
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_INDOOR_URL,
+  timeout: 10000, // Reduced from 15000 to 10000ms
   withCredentials: true,
-  timeout: 20000, // 20 second timeout for indoor API
+  headers: {
+    "Content-Type": "application/json",
+  },
 })
 
-// Request interceptor with token refresh logic
+// Request interceptor
 api.interceptors.request.use(
-  async (config) => {
-    const accessToken = Cookies.get("accessToken")
-
-    if (accessToken) {
-      // Check if token needs refresh
-      if (shouldRefreshToken()) {
-        console.log("[IndoorAPI] Token needs refresh, refreshing before request")
-        await refreshTokenNow()
-        const newToken = Cookies.get("accessToken")
-        if (newToken) {
-          config.headers.Authorization = `Bearer ${newToken}`
-        }
-      } else {
-        config.headers.Authorization = `Bearer ${accessToken}`
-      }
+  (config) => {
+    const token = Cookies.get("accessToken")
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
-
     return config
   },
-  (error) => Promise.reject(error),
+  (error) => {
+    console.error("[API] Request error:", error)
+    return Promise.reject(error)
+  },
 )
 
-// Response interceptor for handling auth errors
+// Response interceptor with better error handling
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config
+  (error) => {
+    console.error("[API] Response error:", error)
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
+    // Handle different error types
+    if (error.code === "ECONNABORTED") {
+      toast.error("Request timeout. Please check your connection.")
+      return Promise.reject(new Error("Request timeout"))
+    }
 
-      try {
-        const refreshed = await refreshTokenNow()
-        if (refreshed) {
-          const newToken = Cookies.get("accessToken")
-          if (newToken) {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`
-            return api(originalRequest)
-          }
-        }
-      } catch (refreshError) {
-        console.error("[IndoorAPI] Token refresh failed:", refreshError)
-        // Don't redirect here, let the auth service handle it
+    if (error.response) {
+      // Server responded with error status
+      const { status, data } = error.response
+
+      switch (status) {
+        case 401:
+          toast.error("Authentication failed. Please login again.")
+          // Clear auth cookies
+          Cookies.remove("accessToken")
+          Cookies.remove("refreshToken")
+          Cookies.remove("userEmail")
+          // Redirect to login
+          window.location.href = "/login"
+          break
+        case 403:
+          toast.error("Access denied. Insufficient permissions.")
+          break
+        case 404:
+          toast.error("Resource not found.")
+          break
+        case 500:
+          toast.error("Server error. Please try again later.")
+          break
+        default:
+          toast.error(data?.message || `Error: ${status}`)
       }
+    } else if (error.request) {
+      // Network error
+      toast.error("Network error. Please check your connection.")
+    } else {
+      // Other error
+      toast.error("An unexpected error occurred.")
     }
 
     return Promise.reject(error)

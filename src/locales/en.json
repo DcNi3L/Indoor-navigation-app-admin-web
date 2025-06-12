@@ -207,7 +207,6 @@
   "deleteProfileConfirm": "Are you sure you want to delete your profile? This action cannot be undone.",
   "searchNodes": "Search Nodes...",
   "viewAllQRCodes": "All Generated QR Codes",
-  "noQRCodesGenerated": "No QR codes have been generated yet.",
   "createFirstQRCode": "Create your first QR code now!",
   "startCreatingQR": "Start Creating",
   "createNewQR": "Create New",
@@ -228,6 +227,7 @@
   "step2of2AddFloor": "Step 2 of 2",
   "storageUsed": "Storage Used",
   "total": "Total",
-  "showSearch":  "Show Search"
+  "showSearch":  "Show Search",
+  "noQRCodesGenerated": "No QR codes have been generated yet."
 }
   

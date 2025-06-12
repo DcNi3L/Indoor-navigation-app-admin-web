@@ -7,10 +7,10 @@ import { refreshTokenNow, shouldRefreshToken } from "./scheduleToken"
 export const api = axios.create({
   baseURL: process.env.REACT_APP_AUTH_URL,
   withCredentials: true,
-  timeout: 15000, // 15 second timeout
+  timeout: 8000, // Reduced timeout
 })
 
-// Request interceptor for token refresh
+// Simplified request interceptor
 api.interceptors.request.use(
   async (config) => {
     const accessToken = Cookies.get("accessToken")
@@ -18,13 +18,16 @@ api.interceptors.request.use(
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`
 
-      // Check if token needs refresh before making request
+      // Only refresh if really needed
       if (shouldRefreshToken()) {
-        console.log("[Auth] Token needs refresh, refreshing before request")
-        await refreshTokenNow()
-        const newToken = Cookies.get("accessToken")
-        if (newToken) {
-          config.headers.Authorization = `Bearer ${newToken}`
+        try {
+          await refreshTokenNow()
+          const newToken = Cookies.get("accessToken")
+          if (newToken) {
+            config.headers.Authorization = `Bearer ${newToken}`
+          }
+        } catch (error) {
+          console.error("[Auth] Token refresh failed:", error)
         }
       }
     }
@@ -34,7 +37,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
-// Response interceptor for handling 401 errors
+// Simplified response interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -54,6 +57,11 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         console.error("[Auth] Token refresh failed in interceptor:", refreshError)
+        // Clear auth and redirect
+        Cookies.remove("accessToken")
+        Cookies.remove("refreshToken")
+        Cookies.remove("userEmail")
+        window.location.href = "/login"
       }
     }
 
@@ -130,16 +138,7 @@ export const usePanelLogin = () => {
     mutationFn: loginPanelUser,
     onSuccess: (data, variables) => {
       toast.success("Login successful")
-
-      // Pre-populate user cache
       queryClient.setQueryData(["user", variables.email], data.user)
-
-      // Prefetch admin list if user is admin
-      queryClient.prefetchQuery({
-        queryKey: ["admins"],
-        queryFn: fetchAllAdmins,
-        staleTime: 10 * 60 * 1000, // 10 minutes
-      })
     },
     onError: (error: any) => {
       console.error("Login error:", error)
@@ -168,14 +167,10 @@ export const useUserByEmail = (email: string) => {
     queryKey: ["user", email],
     queryFn: () => fetchUserByEmail(email),
     enabled: !!email,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes (replaces cacheTime)
-    retry: (failureCount, error: any) => {
-      // Don't retry on 404 (user not found)
-      if (error?.response?.status === 404) return false
-      return failureCount < 2
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1, // Reduced retry
+    retryDelay: 1000, // Fixed delay instead of exponential
   })
 }
 
@@ -183,12 +178,12 @@ export const useAllAdmins = () => {
   return useQuery({
     queryKey: ["admins"],
     queryFn: fetchAllAdmins,
-    staleTime: 15 * 60 * 1000, // 15 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: 1,
+    retryDelay: 1000,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
+    refetchOnReconnect: false,
   })
 }
 
@@ -199,16 +194,12 @@ export const useUpdateUserProfile = () => {
     mutationFn: ({ email, data }: { email: string; data: any }) => updateUserProfile(email, data),
     onSuccess: (data, variables) => {
       toast.success("Profile updated successfully")
-
-      // Update user cache with new data
       queryClient.setQueryData(["user", variables.data.email || variables.email], data)
 
-      // If email changed, also invalidate old email cache
       if (variables.data.email && variables.data.email !== variables.email) {
         queryClient.removeQueries({ queryKey: ["user", variables.email] })
       }
 
-      // Invalidate admin list to refresh data
       queryClient.invalidateQueries({ queryKey: ["admins"] })
     },
     onError: (error: any) => {
@@ -226,20 +217,14 @@ export const useDeleteUserProfile = () => {
     mutationFn: deleteUserProfile,
     onSuccess: (data, email) => {
       toast.success("Profile deleted successfully")
-
-      // Remove user from cache
       queryClient.removeQueries({ queryKey: ["user", email] })
-
-      // Invalidate admin list
       queryClient.invalidateQueries({ queryKey: ["admins"] })
 
-      // Clear cookies and redirect to login
       Cookies.remove("accessToken")
       Cookies.remove("refreshToken")
       Cookies.remove("userEmail")
       Cookies.remove("userId")
 
-      // Redirect to login page
       window.location.href = "/login"
     },
     onError: (error: any) => {

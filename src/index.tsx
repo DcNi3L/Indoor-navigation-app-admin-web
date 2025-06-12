@@ -7,18 +7,21 @@ import { AuthProvider } from "./components/context/AuthContext"
 import { Toaster } from "react-hot-toast"
 import "./i18n"
 
-// Create a client
+// Optimized QueryClient configuration
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      retry: 1, // Reduced from 2 to 1
+      staleTime: 2 * 60 * 1000, // Reduced from 5 to 2 minutes
+      gcTime: 5 * 60 * 1000, // Reduced from 10 to 5 minutes
       refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
+      refetchOnReconnect: false, // Disabled to prevent unnecessary requests
+      refetchOnMount: true,
+      networkMode: "online", // Only run queries when online
     },
     mutations: {
-      retry: 1,
+      retry: 0, // No retry for mutations to prevent hanging
+      networkMode: "online",
     },
   },
 })
@@ -34,7 +37,7 @@ root.render(
         <Toaster
           position="top-right"
           toastOptions={{
-            duration: 4000,
+            duration: 3000, // Reduced duration
             style: {
               background: "#1f2937",
               color: "#f9fafb",
@@ -52,6 +55,13 @@ root.render(
                 background: "#7f1d1d",
                 color: "#fecaca",
                 border: "1px solid #ef4444",
+              },
+            },
+            loading: {
+              style: {
+                background: "#1e40af",
+                color: "#dbeafe",
+                border: "1px solid #3b82f6",
               },
             },
           }}
