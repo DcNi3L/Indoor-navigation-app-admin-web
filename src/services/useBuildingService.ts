@@ -387,6 +387,7 @@ export const useDeleteRoute = () => {
 interface Node {
   id: string
   pos: { x: number; y: number }
+  name: string
   type: string
   nodes: string[]
   floorId?: number

@@ -154,6 +154,13 @@
   "connections": "Связи",
   "connectedNodes": "Связанные узлы",
   "noConnections": "Нет связей",
+  "selectExistingBuilding": "Выбрать существующее здание",
+  "searchBuildings": "Найти здания",
+  "createNewBuilding": "Новое здание",
+  "selectBuildingToAddFloor": "Выбирете здание для добавления этажа",
+  "createNewBuildingDescription": "Выбирете здание которое хотите добавить",
+  "startNewBuilding": "Добавить",
+  "searchBuildingsByNameOrAddress": "Введите название или адрес здания",
 
   "nodeTypes": {
     "ROUTE_NODE": "Точка маршрута",
