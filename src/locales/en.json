@@ -187,6 +187,16 @@
   "buildingInfo": "Building Information",
   "qrCodeData": "QR Code Data",
   "navigationData": "Navigation Data",
-  "locationDetails": "Location Details"
+  "locationDetails": "Location Details",
+  "fillAllFields": "Please fill in all required fields",
+  "invalidEmail": "Please enter a valid email address",
+  "passwordTooShort": "Password must be at least 6 characters long",
+  "imageTooLarge": "Image size must be less than 5MB",
+  "invalidImageType": "Please select a valid image file",
+  "newPassword": "New Password",
+  "optional": "optional",
+  "enterNewPassword": "Enter new password (leave empty to keep current)",
+  "deleteProfile": "Delete Profile",
+  "deleteProfileConfirm": "Are you sure you want to delete your profile? This action cannot be undone."
 }
   

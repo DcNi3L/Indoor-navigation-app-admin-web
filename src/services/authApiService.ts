@@ -99,6 +99,27 @@ const fetchAllAdmins = async () => {
   return res.data
 }
 
+const updateUserProfile = async (
+  email: string,
+  data: {
+    email?: string
+    password?: string
+    firstName?: string
+    lastName?: string
+    pictureUrl?: string
+  },
+) => {
+  const response = await api.put(`/api/users/${email}`, data, {
+    headers: { "Content-Type": "application/json" },
+  })
+  return response.data
+}
+
+const deleteUserProfile = async (email: string) => {
+  const response = await api.delete(`/api/users/${email}`)
+  return response.data
+}
+
 // ===========================
 // 🔹 React Query Hooks
 // ===========================
@@ -168,6 +189,64 @@ export const useAllAdmins = () => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
+  })
+}
+
+export const useUpdateUserProfile = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ email, data }: { email: string; data: any }) => updateUserProfile(email, data),
+    onSuccess: (data, variables) => {
+      toast.success("Profile updated successfully")
+
+      // Update user cache with new data
+      queryClient.setQueryData(["user", variables.data.email || variables.email], data)
+
+      // If email changed, also invalidate old email cache
+      if (variables.data.email && variables.data.email !== variables.email) {
+        queryClient.removeQueries({ queryKey: ["user", variables.email] })
+      }
+
+      // Invalidate admin list to refresh data
+      queryClient.invalidateQueries({ queryKey: ["admins"] })
+    },
+    onError: (error: any) => {
+      console.error("Profile update error:", error)
+      const message = error?.response?.data?.message || "Failed to update profile"
+      toast.error(message)
+    },
+  })
+}
+
+export const useDeleteUserProfile = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: deleteUserProfile,
+    onSuccess: (data, email) => {
+      toast.success("Profile deleted successfully")
+
+      // Remove user from cache
+      queryClient.removeQueries({ queryKey: ["user", email] })
+
+      // Invalidate admin list
+      queryClient.invalidateQueries({ queryKey: ["admins"] })
+
+      // Clear cookies and redirect to login
+      Cookies.remove("accessToken")
+      Cookies.remove("refreshToken")
+      Cookies.remove("userEmail")
+      Cookies.remove("userId")
+
+      // Redirect to login page
+      window.location.href = "/login"
+    },
+    onError: (error: any) => {
+      console.error("Profile deletion error:", error)
+      const message = error?.response?.data?.message || "Failed to delete profile"
+      toast.error(message)
+    },
   })
 }
 
