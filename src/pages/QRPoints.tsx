@@ -35,6 +35,7 @@ interface QRItem {
   buildingName?: string
   floorName?: string
   nodeType?: string
+  nodeName?: string // Добавлено поле для имени POI
 }
 
 interface Building {
@@ -195,25 +196,18 @@ export default function QRPoints() {
       if (!searchQuery.trim()) return true
       return (
         node.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        node.id.toLowerCase().includes(searchQuery.toLowerCase())
+        node.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (node.name && node.name.toLowerCase().includes(searchQuery.toLowerCase())) // Добавлен поиск по имени
       )
     })
 
   const handleGenerate = () => {
     if (!label.trim()) return
 
+    // Изменено: QR-код содержит только ID узла
     let qrValue = label
-
-    // If we're generating from a node, create a structured value
-    if (selectedNode && selectedFloor && selectedBuilding) {
-      qrValue = JSON.stringify({
-        buildingId: selectedBuilding.id,
-        floorId: selectedFloor.id,
-        nodeId: selectedNode.id,
-        type: "navigation",
-        nodeType: selectedNode.type,
-        position: selectedNode.pos,
-      })
+    if (selectedNode) {
+      qrValue = selectedNode.id // Только ID узла, без дополнительной информации
     }
 
     const tempContainer = document.createElement("div")
@@ -239,6 +233,7 @@ export default function QRPoints() {
           buildingName: selectedBuilding?.name,
           floorName: selectedFloor?.name,
           nodeType: selectedNode?.type,
+          nodeName: selectedNode?.name // Сохраняем имя POI
         }
 
         const updatedList = [...qrList, newQr]
@@ -310,6 +305,14 @@ export default function QRPoints() {
       if (qrItem.floorName) locationText += ` - ${qrItem.floorName}`
 
       pdf.text(locationText, pageWidth / 2, yOffset, { align: "center" })
+      yOffset += 10
+    }
+
+    // Add node name if available
+    if (qrItem.nodeName) {
+      pdf.setFontSize(14)
+      pdf.setTextColor("#333333")
+      pdf.text(qrItem.nodeName, pageWidth / 2, yOffset, { align: "center" })
       yOffset += 10
     }
 
@@ -399,6 +402,14 @@ export default function QRPoints() {
         yOffset += 10
       }
 
+      // Add node name if available
+      if (qr.nodeName) {
+        pdf.setFontSize(14)
+        pdf.setTextColor("#333333")
+        pdf.text(qr.nodeName, pageWidth / 2, yOffset, { align: "center" })
+        yOffset += 10
+      }
+
       // Add node type if available
       if (qr.nodeType) {
         pdf.setFontSize(12)
@@ -459,7 +470,7 @@ export default function QRPoints() {
                 navigationStep === "nodes" && "text-indigo-600 dark:text-indigo-400 font-medium",
               )}
             >
-              <FaMapMarkerAlt className="mr-1" /> {selectedFloor.name}
+              <FaLayerGroup className="mr-1" /> {selectedFloor.name}
             </button>
           </>
         )}
@@ -468,7 +479,7 @@ export default function QRPoints() {
           <>
             <span className="mx-2">/</span>
             <span className="flex items-center text-indigo-600 dark:text-indigo-400 font-medium">
-              {getNodeTypeIcon(selectedNode.type)} {getNodeTypeDisplayName(selectedNode.type)}
+              {getNodeTypeIcon(selectedNode.type)} {selectedNode.name || getNodeTypeDisplayName(selectedNode.type)}
             </span>
           </>
         )}
@@ -679,7 +690,8 @@ export default function QRPoints() {
                 key={node.id}
                 onClick={() => {
                   setSelectedNode(node)
-                  setLabel(`${getNodeTypeDisplayName(node.type)} - ${node.id.slice(0, 8)}`)
+                  // Используем имя узла, если оно есть, иначе используем тип и ID
+                  setLabel(node.name || `${getNodeTypeDisplayName(node.type)} - ${node.id.slice(0, 8)}`)
                   setShowQRGenerator(true)
                 }}
                 className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-all"
@@ -690,7 +702,10 @@ export default function QRPoints() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-gray-900 dark:text-white">{getNodeTypeDisplayName(node.type)}</h3>
+                      {/* Отображаем имя POI, если оно есть */}
+                      <h3 className="font-medium text-gray-900 dark:text-white">
+                        {node.name || getNodeTypeDisplayName(node.type)}
+                      </h3>
                       <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">
                         {node.type}
                       </span>
@@ -725,7 +740,8 @@ export default function QRPoints() {
           <p className="text-sm text-indigo-600 dark:text-indigo-400">
             {selectedNode && (
               <>
-                {getNodeTypeIcon(selectedNode.type)} {getNodeTypeDisplayName(selectedNode.type)}
+                {/* Отображаем имя POI, если оно есть */}
+                {getNodeTypeIcon(selectedNode.type)} {selectedNode.name || getNodeTypeDisplayName(selectedNode.type)}
                 <span className="ml-2 text-xs">
                   ({selectedNode.pos.x}, {selectedNode.pos.y})
                 </span>
@@ -832,6 +848,11 @@ export default function QRPoints() {
                     <QRCodeCanvas id={`qr-${qr.value}`} value={qr.value} size={210} level="H" includeMargin />
                   </div>
                   <p className="mt-2 font-medium">{qr.label}</p>
+
+                  {/* Отображаем имя POI, если оно есть */}
+                  {qr.nodeName && (
+                    <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mt-1">{qr.nodeName}</p>
+                  )}
 
                   {/* Location info if available */}
                   {(qr.buildingName || qr.floorName) && (
