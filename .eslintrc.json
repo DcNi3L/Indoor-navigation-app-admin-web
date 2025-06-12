@@ -1,0 +1,31 @@
+{
+  "extends": ["react-app", "react-app/jest"],
+  "rules": {
+    "no-restricted-globals": [
+      "error",
+      {
+        "name": "self",
+        "message": "Use 'self' only in service worker files."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["public/sw.js", "**/sw.js", "**/*worker*.js"],
+      "rules": {
+        "no-restricted-globals": "off"
+      },
+      "env": {
+        "serviceworker": true
+      },
+      "globals": {
+        "self": "readonly",
+        "caches": "readonly",
+        "clients": "readonly",
+        "fetch": "readonly",
+        "Request": "readonly",
+        "Response": "readonly"
+      }
+    }
+  ]
+}

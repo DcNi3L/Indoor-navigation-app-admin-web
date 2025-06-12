@@ -129,11 +129,6 @@ export default function Dashboard() {
   return (
     <ErrorBoundary>
       <div className="p-6 space-y-8 mt-12 dark:bg-gray-900 min-h-screen">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t("dashboard")}</h1>
-        </div>
-
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {systemStats.map((stat, index) => (

@@ -1,70 +1,61 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import React from "react"
 import ReactDOM from "react-dom/client"
-import { Toaster } from "react-hot-toast"
-import "./i18n"
 import "./index.css"
 import App from "./App"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { AuthProvider } from "./components/context/AuthContext"
-import InstallPrompt from "./components/ui/installPrompt"
-import UpdatePrompt from "./components/ui/updatePrompt"
+import { Toaster } from "react-hot-toast"
+import "./i18n"
 
+// Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      retry: 2,
       staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
       refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
+      refetchOnReconnect: true,
     },
     mutations: {
-      retry: 2,
+      retry: 1,
     },
   },
-} as any)
-
-// Set a global cache time for all queries
-queryClient.setDefaultOptions({
-  queries: {
-    cacheTime: 30 * 60 * 1000, // 30 minutes
-  },
-} as any)
-
-// Register service worker
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((registration) => {
-        console.log("SW registered: ", registration)
-
-        // Check for updates every hour
-        setInterval(
-          () => {
-            registration.update()
-          },
-          60 * 60 * 1000,
-        )
-      })
-      .catch((registrationError) => {
-        console.log("SW registration failed: ", registrationError)
-      })
-  })
-}
+})
 
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement)
 
+// Render app
 root.render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Toaster position="bottom-right" reverseOrder={false} />
-        <InstallPrompt />
-        <UpdatePrompt />
-        {/* <GlobalLoading /> */}
-        <div className="h-screen overflow-y-scroll scrollbar-hidden">
-          <App />
-        </div>
+        <App />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: "#1f2937",
+              color: "#f9fafb",
+              border: "1px solid #374151",
+            },
+            success: {
+              style: {
+                background: "#065f46",
+                color: "#d1fae5",
+                border: "1px solid #10b981",
+              },
+            },
+            error: {
+              style: {
+                background: "#7f1d1d",
+                color: "#fecaca",
+                border: "1px solid #ef4444",
+              },
+            },
+          }}
+        />
       </AuthProvider>
     </QueryClientProvider>
   </React.StrictMode>,
