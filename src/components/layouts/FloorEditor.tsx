@@ -28,7 +28,6 @@ import {
   FaLeaf,
   FaCouch,
   FaShoppingBag,
-  FaCoffee,
   FaCreditCard,
   FaParking,
   FaInfoCircle,
@@ -37,20 +36,43 @@ import {
   FaTheaterMasks,
   FaBuilding,
   FaRunning,
-  FaHospital,
   FaUserMd,
   FaPills,
-  FaXRay,
   FaAmbulance,
   FaGraduationCap,
+  FaTshirt,
+  FaGamepad,
+  FaShieldAlt,
+  FaDesktop,
+  FaArchive,
+  FaStethoscope,
+  FaProcedures,
+  FaUserTie,
+  FaCogs,
+  FaConciergeBell,
+  FaWarehouse,
+  FaChild,
+  FaTools,
+  FaKey,
+  FaAppleAlt,
 } from "react-icons/fa"
-import { BiSolidDoorOpen } from "react-icons/bi";
-import { MdElevator, MdStairs  } from "react-icons/md";
-import { IoRestaurant } from "react-icons/io5";
-import { GiBrickWall } from "react-icons/gi";
+import { BiSolidDoorOpen } from "react-icons/bi"
+import {
+  MdElevator,
+  MdStairs,
+  MdLocalLaundryService,
+  MdBalcony,
+  MdMeetingRoom,
+  MdSpa,
+  MdLocalDining,
+  MdFastfood,
+  MdLocalFireDepartment,
+} from "react-icons/md"
+import { IoRestaurant } from "react-icons/io5"
+import { GiBrickWall } from "react-icons/gi"
 import { t } from "i18next"
 import Cookies from "js-cookie"
-import { useNodesByFloor, Node} from '../../services/useBuildingService'
+import { useNodesByFloor, type Node } from "../../services/useBuildingService"
 
 // Типы данных
 type POI = {
@@ -65,7 +87,7 @@ type POI = {
 type Edge = {
   id: string
   from: string // Node ID
-  to: string   // Node ID
+  to: string // Node ID
 }
 
 type PathPoint = { x: number; y: number }
@@ -77,68 +99,130 @@ const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9
 // POI типы по категориям зданий
 const POI_TYPES = {
   house: [
-    { id: "toilet", name: "Toilet", icon: FaToilet },
-    { id: "kitchen", name: "Kitchen", icon: FaUtensils },
-    { id: "bedroom", name: "Bedroom", icon: FaBed },
+    // Rooms
     { id: "living_room", name: "Living Room", icon: FaCouch },
+    { id: "bedroom", name: "Bedroom", icon: FaBed },
+    { id: "kitchen", name: "Kitchen", icon: FaUtensils },
     { id: "bathroom", name: "Bathroom", icon: FaBath },
+    { id: "dining_room", name: "Dining Room", icon: MdLocalDining },
     { id: "garage", name: "Garage", icon: FaCar },
-    { id: "garden", name: "Garden", icon: FaLeaf },
+    { id: "study_room", name: "Study Room", icon: FaBook },
+    { id: "hallway", name: "Hallway", icon: BiSolidDoorOpen },
+    { id: "laundry_room", name: "Laundry Room", icon: MdLocalLaundryService },
+    { id: "basement", name: "Basement", icon: FaWarehouse },
+    { id: "attic", name: "Attic", icon: FaArchive },
+    // POIs
     { id: "entrance", name: "Entrance", icon: BiSolidDoorOpen },
+    { id: "exit", name: "Exit", icon: BiSolidDoorOpen },
+    { id: "stairs", name: "Stairs", icon: MdStairs },
+    { id: "fireplace", name: "Fireplace", icon: MdLocalFireDepartment },
+    { id: "balcony", name: "Balcony", icon: MdBalcony },
+    { id: "garden", name: "Garden", icon: FaLeaf },
+    { id: "pool", name: "Pool", icon: MdSpa },
+    { id: "pantry", name: "Pantry", icon: FaAppleAlt },
+    { id: "closet", name: "Closet", icon: FaTshirt },
+    { id: "storage_room", name: "Storage Room", icon: FaWarehouse },
   ],
   mall: [
-    { id: "shop", name: "Shop", icon: FaShoppingBag },
-    { id: "restaurant", name: "Restaurant", icon: IoRestaurant },
-    { id: "cafe", name: "Cafe", icon: FaCoffee },
-    { id: "atm", name: "ATM", icon: FaCreditCard },
-    { id: "toilet", name: "Toilet", icon: FaToilet },
-    { id: "elevator", name: "Elevator", icon: MdElevator },
-    { id: "escalator", name: "Escalator", icon: MdStairs },
-    { id: "parking", name: "Parking", icon: FaParking },
-    { id: "entrance", name: "Entrance", icon: BiSolidDoorOpen },
-    { id: "exit", name: "Exit", icon: BiSolidDoorOpen },
-    { id: "information", name: "Information", icon: FaInfoCircle },
-  ],
-  educational: [
-    { id: "classroom", name: "Classroom", icon: FaGraduationCap },
-    { id: "library", name: "Library", icon: FaBook },
-    { id: "laboratory", name: "Laboratory", icon: FaFlask },
-    { id: "auditorium", name: "Auditorium", icon: FaTheaterMasks },
-    { id: "cafeteria", name: "Cafeteria", icon: IoRestaurant },
-    { id: "toilet", name: "Toilet", icon: FaToilet },
-    { id: "office", name: "Office", icon: FaBuilding },
-    { id: "gym", name: "Gymnasium", icon: FaRunning },
-    { id: "entrance", name: "Entrance", icon: BiSolidDoorOpen },
-    { id: "elevator", name: "Elevator", icon: MdElevator },
-  ],
-  medical: [
-    { id: "reception", name: "Reception", icon: FaHospital },
-    { id: "doctor_office", name: "Doctor's Office", icon: FaUserMd },
-    { id: "surgery", name: "Surgery", icon: FaHospital },
-    { id: "pharmacy", name: "Pharmacy", icon: FaPills },
-    { id: "laboratory", name: "Laboratory", icon: FaFlask },
-    { id: "xray", name: "X-Ray", icon: FaXRay },
-    { id: "emergency", name: "Emergency", icon: FaAmbulance },
-    { id: "toilet", name: "Toilet", icon: FaToilet },
-    { id: "elevator", name: "Elevator", icon: MdElevator },
-    { id: "entrance", name: "Entrance", icon: BiSolidDoorOpen },
-  ],
-  default: [
-    { id: "toilet", name: "Toilet", icon: FaToilet },
-    { id: "entrance", name: "Entrance", icon: BiSolidDoorOpen },
+    // Rooms
+    { id: "main_entrance", name: "Main Entrance", icon: BiSolidDoorOpen },
+    { id: "food_court", name: "Food Court", icon: MdFastfood },
+    { id: "restrooms", name: "Restrooms", icon: FaToilet },
+    { id: "customer_service", name: "Customer Service Desk", icon: FaConciergeBell },
+    { id: "shops_stores", name: "Shops/Stores", icon: FaShoppingBag },
+    { id: "entertainment_area", name: "Entertainment Area", icon: FaGamepad },
+    { id: "parking_area", name: "Parking Area", icon: FaParking },
     { id: "elevator", name: "Elevator", icon: MdElevator },
     { id: "stairs", name: "Stairs", icon: MdStairs },
+    // POIs
+    { id: "entrance", name: "Entrance", icon: BiSolidDoorOpen },
     { id: "exit", name: "Exit", icon: BiSolidDoorOpen },
+    { id: "resting_areas", name: "Resting Areas", icon: FaCouch },
+    { id: "atm", name: "ATM", icon: FaCreditCard },
+    { id: "information_kiosk", name: "Information Kiosk", icon: FaInfoCircle },
+    { id: "security_desk", name: "Security Desk", icon: FaShieldAlt },
+    { id: "emergency_exit", name: "Emergency Exit", icon: MdLocalFireDepartment },
+    { id: "escalator", name: "Escalator", icon: MdStairs },
+    { id: "elevators", name: "Elevators", icon: MdElevator },
+    { id: "lost_found", name: "Lost & Found", icon: FaKey },
+  ],
+  educational: [
+    // Rooms
+    { id: "classroom", name: "Classroom", icon: FaGraduationCap },
+    { id: "auditorium", name: "Auditorium", icon: FaTheaterMasks },
+    { id: "library", name: "Library", icon: FaBook },
+    { id: "laboratory", name: "Laboratory", icon: FaFlask },
+    { id: "computer_lab", name: "Computer Lab", icon: FaDesktop },
+    { id: "faculty_offices", name: "Faculty Offices", icon: FaBuilding },
+    { id: "principal_office", name: "Principal's Office", icon: FaUserTie },
+    { id: "hallways", name: "Hallways", icon: BiSolidDoorOpen },
+    { id: "cafeteria", name: "Cafeteria", icon: IoRestaurant },
+    { id: "restrooms", name: "Restrooms", icon: FaToilet },
+    { id: "gymnasium", name: "Gymnasium", icon: FaRunning },
+    { id: "locker_rooms", name: "Locker Rooms", icon: FaTshirt },
+    // POIs
+    { id: "entrance", name: "Entrance", icon: BiSolidDoorOpen },
+    { id: "exit", name: "Exit", icon: BiSolidDoorOpen },
+    { id: "fire_exits", name: "Fire Exits", icon: MdLocalFireDepartment },
+    { id: "parking_lot", name: "Parking Lot", icon: FaParking },
+    { id: "emergency_exit", name: "Emergency Exit", icon: MdLocalFireDepartment },
+    { id: "bulletin_board", name: "Bulletin Board", icon: FaInfoCircle },
+    { id: "staircase", name: "Staircase", icon: MdStairs },
+    { id: "elevator", name: "Elevator", icon: MdElevator },
+    { id: "school_gate", name: "School Gate", icon: BiSolidDoorOpen },
+    { id: "playground", name: "Playground", icon: FaChild },
+  ],
+  medical: [
+    // Rooms
+    { id: "waiting_room", name: "Waiting Room", icon: FaCouch },
+    { id: "doctor_office", name: "Doctor's Office", icon: FaUserMd },
+    { id: "examination_room", name: "Examination Room", icon: FaStethoscope },
+    { id: "operating_room", name: "Operating Room", icon: FaProcedures },
+    { id: "patient_room", name: "Patient Room", icon: FaBed },
+    { id: "emergency_room", name: "Emergency Room", icon: FaAmbulance },
+    { id: "pharmacy", name: "Pharmacy", icon: FaPills },
+    { id: "laboratory", name: "Laboratory", icon: FaFlask },
+    { id: "restrooms", name: "Restrooms", icon: FaToilet },
+    { id: "storage_room", name: "Storage Room", icon: FaWarehouse },
+    // POIs
+    { id: "entrance", name: "Entrance", icon: BiSolidDoorOpen },
+    { id: "exit", name: "Exit", icon: BiSolidDoorOpen },
+    { id: "emergency_exit", name: "Emergency Exit", icon: MdLocalFireDepartment },
+    { id: "information_desk", name: "Information Desk", icon: FaInfoCircle },
+    { id: "parking_area", name: "Parking Area", icon: FaParking },
+    { id: "ambulance_bay", name: "Ambulance Bay", icon: FaAmbulance },
+    { id: "waiting_area", name: "Waiting Area", icon: FaCouch },
+    { id: "resting_area", name: "Resting Area", icon: FaCouch },
+    { id: "pharmacy_counter", name: "Pharmacy Counter", icon: FaPills },
+    { id: "elevator", name: "Elevator", icon: MdElevator },
+    { id: "staircase", name: "Staircase", icon: MdStairs },
+  ],
+  default: [
+    { id: "entrance", name: "Entrance", icon: BiSolidDoorOpen },
+    { id: "exit", name: "Exit", icon: BiSolidDoorOpen },
+    { id: "elevator", name: "Elevator", icon: MdElevator },
+    { id: "stairs", name: "Stairs", icon: MdStairs },
+    { id: "toilet", name: "Toilet", icon: FaToilet },
+    { id: "fire_exit", name: "Fire Exit", icon: MdLocalFireDepartment },
+    { id: "rest_area", name: "Rest Area", icon: FaCouch },
+    { id: "staff_room", name: "Staff Room", icon: FaUserTie },
+    { id: "technical_room", name: "Technical Room", icon: FaCogs },
+    { id: "conference_room", name: "Conference Room", icon: MdMeetingRoom },
+    { id: "storage", name: "Storage", icon: FaWarehouse },
+    { id: "security", name: "Security", icon: FaShieldAlt },
+    { id: "maintenance", name: "Maintenance", icon: FaTools },
+    { id: "office", name: "Office", icon: FaBuilding },
+    { id: "reception", name: "Reception", icon: FaInfoCircle },
   ],
 }
 
 export default function FloorEditor({
-                                      imageUrl,
-                                      width,
-                                      height,
-                                      floorId,
-                                      buildingType = "default",
-                                    }: {
+  imageUrl,
+  width,
+  height,
+  floorId,
+  buildingType = "default",
+}: {
   imageUrl: string
   width: number
   height: number
@@ -166,7 +250,7 @@ export default function FloorEditor({
   const [history, setHistory] = useState<any[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
 
-  const { data: nodes, isLoading, error } = useNodesByFloor(floorId);
+  const { data: nodes, isLoading, error } = useNodesByFloor(floorId)
 
   const currentPOITypes = POI_TYPES[buildingType as keyof typeof POI_TYPES] || POI_TYPES.default
 
@@ -174,7 +258,7 @@ export default function FloorEditor({
   const getAllNodes = (): POI[] => [...pois, ...routeNodes]
 
   // Helper function to find node by ID
-  const findNodeById = (id: string): POI | undefined => getAllNodes().find(node => node.id === id)
+  const findNodeById = (id: string): POI | undefined => getAllNodes().find((node) => node.id === id)
 
   useEffect(() => {
     if (nodes) {
@@ -186,12 +270,12 @@ export default function FloorEditor({
         name: node.name,
         description: `${node.name} at (${Math.round(node.pos.x * width)}, ${Math.round(node.pos.y * height)})`,
       }))
-      setPois(_pois);
+      setPois(_pois)
 
-      const generatedEdges = generateEdgesFromNodes(nodes);
-      setEdges(generatedEdges);
+      const generatedEdges = generateEdgesFromNodes(nodes)
+      setEdges(generatedEdges)
     }
-  }, [nodes, floorId, width, height]);
+  }, [nodes, floorId, width, height])
 
   useEffect(() => {
     const img = new Image()
@@ -218,25 +302,25 @@ export default function FloorEditor({
   }, [mode])
 
   const generateEdgesFromNodes = (nodes: Node[]) => {
-    const newEdges: Edge[] = [];
+    const newEdges: Edge[] = []
 
     // Simple logic to connect nodes sequentially
     for (let i = 0; i < nodes.length; i++) {
-      const fromNode = nodes[i];
+      const fromNode = nodes[i]
 
       for (let j = 0; j < nodes[i].nodes.length; j++) {
-        const toNodeId = nodes[i].nodes[j];
+        const toNodeId = nodes[i].nodes[j]
         // Here, we create an edge between every pair of nodes.
         // You can adjust this logic based on your actual requirement, e.g., distance-based, type-based, etc.
         newEdges.push({
           id: generateId(), // Use the generateId function you already have
           from: fromNode.id,
           to: toNodeId,
-        });
+        })
       }
     }
-    return newEdges;
-  };
+    return newEdges
+  }
 
   const saveToHistory = () => {
     const state = {
@@ -374,12 +458,10 @@ export default function FloorEditor({
           if (isNear) {
             erased = true
             // Remove all edges connected to this node
-            setEdges((prevEdges) =>
-              prevEdges.filter((edge) => edge.from !== poi.id && edge.to !== poi.id)
-            )
+            setEdges((prevEdges) => prevEdges.filter((edge) => edge.from !== poi.id && edge.to !== poi.id))
           }
           return !isNear
-        })
+        }),
       )
 
       setRouteNodes((prev) =>
@@ -389,12 +471,10 @@ export default function FloorEditor({
           if (isNear) {
             erased = true
             // Remove all edges connected to this node
-            setEdges((prevEdges) =>
-              prevEdges.filter((edge) => edge.from !== node.id && edge.to !== node.id)
-            )
+            setEdges((prevEdges) => prevEdges.filter((edge) => edge.from !== node.id && edge.to !== node.id))
           }
           return !isNear
-        })
+        }),
       )
 
       setDrawingPath((prev) => prev.filter((p) => Math.abs(p.x - pos.x) > 0.01 || Math.abs(p.y - pos.y) > 0.01))
@@ -432,9 +512,10 @@ export default function FloorEditor({
         saveToHistory()
 
         // Check if connection already exists
-        const connectionExists = edges.some(edge =>
-          (edge.from === connectingFrom && edge.to === nodeId) ||
-          (edge.from === nodeId && edge.to === connectingFrom)
+        const connectionExists = edges.some(
+          (edge) =>
+            (edge.from === connectingFrom && edge.to === nodeId) ||
+            (edge.from === nodeId && edge.to === connectingFrom),
         )
 
         if (connectionExists) {
@@ -443,7 +524,7 @@ export default function FloorEditor({
           const newEdge: Edge = {
             id: generateId(),
             from: connectingFrom,
-            to: nodeId
+            to: nodeId,
           }
           setEdges((prev) => [...prev, newEdge])
           toast.success("Nodes connected!", { duration: 1500 })
@@ -483,15 +564,11 @@ export default function FloorEditor({
 
       // Update the node position
       setPois((prev) => {
-        return prev.map(poi =>
-          poi.id === nodeId ? { ...poi, ...pos } : poi
-        )
+        return prev.map((poi) => (poi.id === nodeId ? { ...poi, ...pos } : poi))
       })
 
       setRouteNodes((prev) => {
-        return prev.map(node =>
-          node.id === nodeId ? { ...node, ...pos } : node
-        )
+        return prev.map((node) => (node.id === nodeId ? { ...node, ...pos } : node))
       })
     }
 
@@ -574,14 +651,10 @@ export default function FloorEditor({
         const toBackendId = backendIdMap[edge.to]
 
         if (fromBackendId && toBackendId) {
-          await axios.post(
-            `${process.env.REACT_APP_INDOOR_URL}/floors/${floorId}/nodes/bi-connection`,
-            null,
-            {
-              params: { node1: fromBackendId, node2: toBackendId },
-              headers: { Authorization: `Bearer ${Cookies.get("accessToken")}` },
-            }
-          )
+          await axios.post(`${process.env.REACT_APP_INDOOR_URL}/floors/${floorId}/nodes/bi-connection`, null, {
+            params: { node1: fromBackendId, node2: toBackendId },
+            headers: { Authorization: `Bearer ${Cookies.get("accessToken")}` },
+          })
         }
       }
 
@@ -604,7 +677,7 @@ export default function FloorEditor({
             }
           })
           .filter(Boolean),
-        connections: edges.map(edge => ({
+        connections: edges.map((edge) => ({
           id: edge.id,
           from: backendIdMap[edge.from],
           to: backendIdMap[edge.to],
@@ -631,7 +704,7 @@ export default function FloorEditor({
           totalRouteNodes: routeNodes.length,
           totalConnections: edges.length,
           totalWalls: walls.length,
-        }
+        },
       }
 
       const data = JSON.stringify(exportData, null, 2)
@@ -711,19 +784,19 @@ export default function FloorEditor({
           </p>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
           {/* POI Types */}
           <div>
             <h4 className="text-sm font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
               <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-              POI Types
+              POI Types ({currentPOITypes.length})
             </h4>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
               {currentPOITypes.map((type) => (
                 <button
                   key={type.id}
                   onClick={() => setSelectedType(type.id)}
-                  className={`p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center min-h-[60px] ${
+                  className={`p-2 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center min-h-[50px] ${
                     selectedType === type.id
                       ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-lg scale-105"
                       : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 hover:border-indigo-300 hover:scale-102"
@@ -731,7 +804,7 @@ export default function FloorEditor({
                   title={type.name}
                 >
                   <type.icon
-                    className={`text-lg mb-1 ${
+                    className={`text-sm mb-1 ${
                       selectedType === type.id
                         ? "text-indigo-600 dark:text-indigo-400"
                         : "text-gray-600 dark:text-gray-400"
@@ -853,7 +926,9 @@ export default function FloorEditor({
                 }`}
               >
                 {showRoutes ? <FaEye /> : <FaEyeSlash />}
-                <span>Routes ({routeNodes.length}) & Connections ({edges.length})</span>
+                <span>
+                  Routes ({routeNodes.length}) & Connections ({edges.length})
+                </span>
               </button>
 
               <button
@@ -955,7 +1030,14 @@ export default function FloorEditor({
           style={{
             backgroundImage: `url(${imageUrl})`,
             aspectRatio: imageRatio,
-            cursor: mode === "draw" ? "crosshair" : mode === "erase" ? "not-allowed" : mode === "connect" ? "pointer" : "default",
+            cursor:
+              mode === "draw"
+                ? "crosshair"
+                : mode === "erase"
+                  ? "not-allowed"
+                  : mode === "connect"
+                    ? "pointer"
+                    : "default",
             transform: `scale(${scale})`,
             transformOrigin: "center center",
             transition: "transform 0.3s ease-out",
@@ -1157,17 +1239,23 @@ export default function FloorEditor({
                   title={`${poi.name || poi.type} - (${Math.round(poi.x * width)}, ${Math.round(poi.y * height)})`}
                 >
                   <div className="relative">
-                    <div className={`w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-lg border-2 ${
-                      isSelected ? "border-green-500 bg-green-50" : "border-indigo-500"
-                    } flex items-center justify-center hover:scale-110 transition-transform`}>
+                    <div
+                      className={`w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-lg border-2 ${
+                        isSelected ? "border-green-500 bg-green-50" : "border-indigo-500"
+                      } flex items-center justify-center hover:scale-110 transition-transform`}
+                    >
                       {poiType?.icon ? (
-                        <poiType.icon className={`text-xl ${
-                          isSelected ? "text-green-600" : "text-indigo-600 dark:text-indigo-400"
-                        }`} />
+                        <poiType.icon
+                          className={`text-xl ${
+                            isSelected ? "text-green-600" : "text-indigo-600 dark:text-indigo-400"
+                          }`}
+                        />
                       ) : (
-                        <POIIcon type={poi.type} size={20} className={`${
-                          isSelected ? "text-green-600" : "text-indigo-600 dark:text-indigo-400"
-                        }`} />
+                        <POIIcon
+                          type={poi.type}
+                          size={20}
+                          className={`${isSelected ? "text-green-600" : "text-indigo-600 dark:text-indigo-400"}`}
+                        />
                       )}
                     </div>
                     {poi.name && (
@@ -1204,9 +1292,11 @@ export default function FloorEditor({
                   }}
                   title={`Route Node - (${Math.round(node.x * width)}, ${Math.round(node.y * height)})`}
                 >
-                  <div className={`w-8 h-8 ${
-                    isSelected ? "bg-green-500 border-green-600" : "bg-orange-500"
-                  } rounded-full shadow-lg border-2 border-white flex items-center justify-center text-white text-sm font-bold hover:scale-110 transition-transform`}>
+                  <div
+                    className={`w-8 h-8 ${
+                      isSelected ? "bg-green-500 border-green-600" : "bg-orange-500"
+                    } rounded-full shadow-lg border-2 border-white flex items-center justify-center text-white text-sm font-bold hover:scale-110 transition-transform`}
+                  >
                     R
                   </div>
                 </div>
