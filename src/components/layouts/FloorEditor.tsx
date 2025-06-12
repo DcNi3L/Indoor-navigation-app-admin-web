@@ -264,8 +264,8 @@ export default function FloorEditor({
     if (nodes) {
       const _pois = nodes.map((node) => ({
         id: node.id,
-        x: node.pos.x / width,
-        y: node.pos.y / height,
+        x: node.pos.x,
+        y: node.pos.y,
         type: node.type,
         name: node.name,
         description: `${node.name} at (${Math.round(node.pos.x * width)}, ${Math.round(node.pos.y * height)})`,
@@ -624,8 +624,8 @@ export default function FloorEditor({
           `${process.env.REACT_APP_INDOOR_URL}/floors/${floorId}/node`,
           {
             pos: {
-              x: node.x * width,
-              y: node.y * height,
+              x: node.x,
+              y: node.y,
             },
             type: node.type === "ROUTE_NODE" ? "ROUTE_NODE" : "POI",
             name: node.name,
